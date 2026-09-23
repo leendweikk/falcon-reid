@@ -5,3 +5,4 @@ runs/
 *.npy
 .venv/
 __pycache__/
+!submission/embeddings.npy

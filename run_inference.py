@@ -82,8 +82,8 @@ def main():
     g_df = pd.read_csv(args.gallery, dtype={"image_id": str})
     files = {p.stem: p for p in Path(args.images).iterdir()}
 
-    models = [(load_model("convnext_base.dinov3_lvd1689m", args.base_weights, device), 0.7),
-              (load_model("convnext_small.dinov3_lvd1689m", args.small_weights, device), 0.3)]
+    models = [(load_model("convnext_base.dinov3_lvd1689m", args.base_weights, device), 0.6),
+              (load_model("convnext_small.dinov3_lvd1689m", args.small_weights, device), 0.4)]
 
     t0 = time.time()
     q_emb = embed_all(models, q_df, files, device)
