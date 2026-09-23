@@ -38,6 +38,16 @@ class ReIDModel(nn.Module):
         return feat, logits
 
 
+def load_reid(path, backbone, device="cpu"):
+    """Load our trained weights offline. Returns (model, input_size).
+    Weights saved by train_final.py carry their own input size; older files are 256."""
+    state = torch.load(path, map_location="cpu")
+    size = int(state.pop("input_size", torch.tensor(256)).item())
+    model = ReIDModel(num_classes=state["classifier.weight"].shape[0], backbone=backbone, pretrained=False)
+    model.load_state_dict(state)
+    return model.to(device).eval(), size
+
+
 if __name__ == "__main__":
     for head in ["linear", "cosface"]:
         model = ReIDModel(num_classes=1241, head=head).cuda().train()

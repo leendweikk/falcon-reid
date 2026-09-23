@@ -5,7 +5,8 @@ Final training recipe (fixed by validation):
 
   python train_final.py --model base     -> weights/base.pth   (all of train.csv)
   python train_final.py --model small    -> weights/small.pth
-  optional: --train-csv <csv> --out <dir> --seed <n>
+  optional: --train-csv <csv> --out <dir> --seed <n> --size <n>
+  The saved file records its input size ("input_size"), so inference always uses the right size.
 """
 import argparse
 import math
@@ -18,7 +19,7 @@ import torch
 from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from torch.utils.data import DataLoader
 
-from reid.data import TrainSet, PKSampler, STRONG_LIGHT_AUG
+from reid.data import TrainSet, PKSampler, STRONG_LIGHT_AUG, make_transforms
 from reid.losses import ReIDLoss
 from reid.model import ReIDModel
 
@@ -36,6 +37,7 @@ def main():
     ap.add_argument("--train-csv", default=str(ROOT / "data" / "train.csv"))
     ap.add_argument("--out", default=str(ROOT / "weights"))
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--size", type=int, default=256, help="square input size (256 = proven)")
     args = ap.parse_args()
 
     assert not STRONG_LIGHT_AUG, "strong light augmentation was rejected: set it to False in data.py"
@@ -44,8 +46,9 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     name = args.model if args.seed == 0 else f"{args.model}_seed{args.seed}"
 
-    ds = TrainSet(Path(args.train_csv))
-    print(f"[{name}] training on {ds.num_classes} cars, {len(ds)} photos -> {out_dir}")
+    train_tf, _ = make_transforms((args.size, args.size))
+    ds = TrainSet(Path(args.train_csv), transform=train_tf)
+    print(f"[{name}] training on {ds.num_classes} cars, {len(ds)} photos, input {args.size}x{args.size} -> {out_dir}")
     loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=16, K=4),
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
@@ -89,7 +92,9 @@ def main():
         print(f"[{name}] epoch {epoch:2d}/{STOP_EPOCH} | loss {avg[0]:.3f} "
               f"(id {avg[1]:.3f}, tri {avg[2]:.3f}) | {time.time() - start:.0f}s")
 
-    torch.save(ema.module.state_dict(), out_dir / f"{name}.pth")
+    state = ema.module.state_dict()
+    state["input_size"] = torch.tensor(args.size)              # inference reads this
+    torch.save(state, out_dir / f"{name}.pth")
     print(f"[{name}] saved final EMA model -> {out_dir / (name + '.pth')}")
 
 

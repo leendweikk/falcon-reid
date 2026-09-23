@@ -5,6 +5,7 @@ Scored with the organizers' own ranking_metrics, exactly like submission.csv (to
 
   python experiments/multisize_test.py --weights runs/convnext_b_v6_ema/best_ema.pth
   python experiments/multisize_test.py --weights runs/split7/base.pth --splits data/splits_seed7
+  python experiments/multisize_test.py --weights runs/val_base_320/best_ema.pth --sizes 288,320,352
 
 Keep rule: a combo is adopted only if it beats 256-alone by >= 0.7 mAP@10 on BOTH splits
 (with re-ranking, fast mode = Base, no flip).
@@ -26,17 +27,10 @@ from torchvision import transforms as T
 
 from reid import evaluate as official
 from reid.data import CROPS, MEAN, STD
-from reid.model import ReIDModel
+from reid.model import load_reid
 from reid.rerank import re_ranking_streaming
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-def load_model(backbone, path, device):
-    state = torch.load(path, map_location="cpu")
-    m = ReIDModel(num_classes=state["classifier.weight"].shape[0], backbone=backbone, pretrained=False)
-    m.load_state_dict(state)
-    return m.to(device).eval()
 
 
 @torch.no_grad()
@@ -71,7 +65,8 @@ def main():
     query, gallery = official.load_gt(splits / "val_gt.csv")
     q_ids = pd.read_csv(splits / "val_query.csv", dtype={"image_id": str}).image_id.tolist()
     g_ids = pd.read_csv(splits / "val_gallery.csv", dtype={"image_id": str}).image_id.tolist()
-    model = load_model(args.backbone, ROOT / args.weights, device)
+    model, trained_size = load_reid(ROOT / args.weights, args.backbone, device)
+    print(f"model trained at {trained_size} (as recorded in the file; files from train.py say 256)")
 
     sizes = [int(s) for s in args.sizes.split(",")]
     emb = {}
@@ -94,10 +89,10 @@ def main():
         print(rows[-1])
 
     df = pd.DataFrame(rows)
-    base = df.loc[df.sizes == "256", "mAP@10 (re-rank)"].item()
-    df["gain vs 256"] = df["mAP@10 (re-rank)"] - base
+    if (df.sizes == "256").any():
+        df["gain vs 256"] = df["mAP@10 (re-rank)"] - df.loc[df.sizes == "256", "mAP@10 (re-rank)"].item()
     print("\n" + df.round(2).to_string(index=False))
-    out = ROOT / "runs" / f"multisize_{Path(args.splits).name}.csv"
+    out = ROOT / "runs" / f"multisize_{Path(args.splits).name}_{Path(args.weights).parent.name}.csv"
     df.to_csv(out, index=False)
     print(f"\nsaved -> {out}")
 
