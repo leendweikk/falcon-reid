@@ -6,10 +6,11 @@ import torch.nn.functional as F
 
 class ReIDModel(nn.Module):
     def __init__(self, num_classes, backbone="convnext_base.dinov3_lvd1689m",
-                 head="linear", scale=30.0, margin=0.25):
+                 head="linear", scale=30.0, margin=0.25, pretrained=True):
         super().__init__()
-        self.backbone = timm.create_model(backbone, pretrained=True, num_classes=0)
-        self.backbone.set_grad_checkpointing(True)   # trade compute for memory
+        # pretrained=False -> build the empty architecture offline (no internet), then load our weights
+        self.backbone = timm.create_model(backbone, pretrained=pretrained, num_classes=0)
+        self.backbone.set_grad_checkpointing(True)   # trade compute for memory (training only)
         dim = self.backbone.num_features
 
         self.bnneck = nn.BatchNorm1d(dim)

@@ -65,31 +65,37 @@ def re_ranking(q, g, k1=20, k2=6, lam=0.3):
     return -final[:, len(q):]                                  # minus distance = similarity
 
 
+def re_ranking_streaming(q, g, k1=10, k2=3, lam=0.3):
+    """ALLOWED version: each query is re-ranked alone against the gallery (never sees other queries)."""
+    out = []
+    for i in range(len(q)):
+        out.append(re_ranking(q[i:i + 1], g, k1, k2, lam))
+        if (i + 1) % 200 == 0:
+            print(f"  streaming re-ranking: {i + 1}/{len(q)} queries")
+    return np.concatenate(out)
+
+
 qB, gB = load("convnext_b_v2_softmargin")
 qS, gS = load("convnext_s_v1")
-simB, simS = qB @ gB.T, qS @ gS.T
 
-results = [("Base alone (current best)", *score(simB)),
-           ("Small alone", *score(simS))]
-
-for w in [0.8, 0.7, 0.6]:
-    results.append((f"Ensemble {w:.1f} Base + {1 - w:.1f} Small", *score(w * simB + (1 - w) * simS)))
-
-for k in [1, 2]:
-    results.append((f"DBA gallery-only k={k} (Base)", *score(qB @ dba(gB, k).T)))
-
-for k1, k2 in [(20, 6), (10, 3), (6, 2)]:
-    results.append((f"Re-ranking k1={k1} k2={k2} (Base)", *score(re_ranking(qB, gB, k1, k2))))
-
-# ---- combinations: glue the two fingerprints into one (0.7 Base + 0.3 Small) ----
+# glue the two fingerprints into one (0.7 Base + 0.3 Small)
 qE = np.concatenate([np.sqrt(0.7) * qB, np.sqrt(0.3) * qS], axis=1)
 gE = np.concatenate([np.sqrt(0.7) * gB, np.sqrt(0.3) * gS], axis=1)
 
-results.append(("Ensemble glued (should match 0.7/0.3)", *score(qE @ gE.T)))
-results.append(("Ensemble + DBA k=1   [SAFE]", *score(qE @ dba(gE, 1).T)))
-results.append(("Base + DBA k=1 + Re-ranking 10/3", *score(re_ranking(qB, dba(gB, 1), 10, 3))))
-results.append(("Ensemble + Re-ranking 10/3", *score(re_ranking(qE, gE, 10, 3))))
-results.append(("Ensemble + DBA k=1 + Re-ranking 10/3", *score(re_ranking(qE, dba(gE, 1), 10, 3))))
+results = [
+    ("Base alone", *score(qB @ gB.T)),
+    ("Ensemble", *score(qE @ gE.T)),
+    ("Ensemble + DBA k=1   [current safe best]", *score(qE @ dba(gE, 1).T)),
+    ("Ensemble + Re-rank 10/3 ALL QUERIES [FORBIDDEN, reference only]", *score(re_ranking(qE, gE, 10, 3))),
+]
+
+# ---- ALLOWED re-ranking: one query at a time against the static gallery ----
+for k1, k2 in [(10, 3), (6, 2), (20, 6)]:
+    print(f"running STREAMING re-rank {k1}/{k2} (Base)...")
+    results.append((f"STREAMING Re-rank {k1}/{k2} (Base)", *score(re_ranking_streaming(qB, gB, k1, k2))))
+for k1, k2 in [(10, 3), (6, 2)]:
+    print(f"running STREAMING re-rank {k1}/{k2} (Ensemble)...")
+    results.append((f"STREAMING Re-rank {k1}/{k2} (Ensemble)", *score(re_ranking_streaming(qE, gE, k1, k2))))
 
 df = pd.DataFrame(results, columns=["method", "mAP@10", "Rank-1", "Rank-5"])
 print(df.round(4).to_string(index=False))

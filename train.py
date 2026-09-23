@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
+from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from torch.utils.data import DataLoader
 
 import evaluate as official                 # the organizers' evaluate.py
@@ -16,12 +17,13 @@ from losses import ReIDLoss
 from model import ReIDModel
 
 # ----------------------------- settings -----------------------------
-RUN_NAME = "convnext_b_v5_veri"
-BACKBONE = "convnext_base.dinov3_lvd1689m"
+RUN_NAME = "convnext_s_v2_ema"
+BACKBONE = "convnext_small.dinov3_lvd1689m"
 HEAD = "linear"                             # "linear" or "cosface"
 TRIPLET_MARGIN = None                       # None = soft-margin triplet, 0.3 = classic
 SPLITS = Path("C:/falcon/data/splits")
-TRAIN_CSVS = [SPLITS / "train_split.csv", SPLITS / "veri.csv"]   # our cars + VeRi
+TRAIN_CSVS = [SPLITS / "train_split.csv"]   # ONLY our own data (no VeRi)
+EMA_DECAY = 0.998                           # smoothed copy ~ average of the last ~500 steps
 EPOCHS = 30
 WARMUP_EPOCHS = 3
 LR_BACKBONE, LR_HEAD = 1e-4, 1e-3
@@ -29,6 +31,8 @@ WEIGHT_DECAY = 1e-4
 EVAL_EVERY = 5
 OUT = Path("C:/falcon/runs") / RUN_NAME
 # --------------------------------------------------------------------
+
+torch.backends.cudnn.benchmark = True       # free speedup for fixed-size images
 
 
 @torch.no_grad()
@@ -62,6 +66,7 @@ def main():
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
     model = ReIDModel(num_classes=ds.num_classes, backbone=BACKBONE, head=HEAD).cuda().train()
+    ema = AveragedModel(model, multi_avg_fn=get_ema_multi_avg_fn(EMA_DECAY), use_buffers=True)
     loss_fn = ReIDLoss(margin=TRIPLET_MARGIN, smoothing=0.1)
 
     optimizer = torch.optim.AdamW([
@@ -85,10 +90,11 @@ def main():
     g_ids = pd.read_csv(SPLITS / "val_gallery.csv", dtype={"image_id": str}).image_id.tolist()
     gt_query, gt_gallery = official.load_gt(SPLITS / "val_gt.csv")
 
-    best_map = 0.0
+    best = {"normal": 0.0, "ema": 0.0}
     log = open(OUT / "log.csv", "w", newline="")
     writer = csv.writer(log)
-    writer.writerow(["epoch", "loss", "id_loss", "tri_loss", "mAP@10", "Rank-1", "Rank-5", "seconds"])
+    writer.writerow(["epoch", "loss", "id_loss", "tri_loss", "mAP@10", "Rank-1", "Rank-5",
+                     "EMA_mAP@10", "EMA_Rank-1", "EMA_Rank-5", "seconds"])
 
     for epoch in range(1, EPOCHS + 1):
         start, sums = time.time(), np.zeros(3)
@@ -103,27 +109,31 @@ def main():
             scaler.step(optimizer)
             scaler.update()
             scheduler.step()
+            ema.update_parameters(model)                    # update the smoothed copy
             sums += [loss.item(), id_l, tri_l]
 
         avg = sums / steps_per_epoch
         secs = time.time() - start
-        row = [epoch, *np.round(avg, 4), "", "", "", round(secs)]
+        row = [epoch, *np.round(avg, 4), "", "", "", "", "", "", round(secs)]
         msg = f"epoch {epoch:2d} | loss {avg[0]:.3f} (id {avg[1]:.3f}, tri {avg[2]:.3f}) | {secs:.0f}s"
 
         if epoch == 1 or epoch % EVAL_EVERY == 0 or epoch == EPOCHS:
-            m = validate(model, q_ids, g_ids, gt_query, gt_gallery)
-            row[4:7] = [round(m["mAP@10"], 4), round(m["Rank-1"], 4), round(m["Rank-5"], 4)]
-            msg += f" | mAP@10 {m['mAP@10']:.4f}  R1 {m['Rank-1']:.4f}  R5 {m['Rank-5']:.4f}"
-            if m["mAP@10"] > best_map:
-                best_map = m["mAP@10"]
-                torch.save(model.state_dict(), OUT / "best.pth")
-                msg += "  <- best, saved"
+            for kind, net, col in [("normal", model, 4), ("ema", ema.module, 7)]:
+                m = validate(net, q_ids, g_ids, gt_query, gt_gallery)
+                row[col:col + 3] = [round(m["mAP@10"], 4), round(m["Rank-1"], 4), round(m["Rank-5"], 4)]
+                msg += f" | {kind} mAP@10 {m['mAP@10']:.4f}"
+                if m["mAP@10"] > best[kind]:
+                    best[kind] = m["mAP@10"]
+                    torch.save(net.state_dict(), OUT / f"best_{kind}.pth")
+                    msg += " *"
 
-        torch.save(model.state_dict(), OUT / "last.pth")    # crash insurance, every epoch
+        torch.save(model.state_dict(), OUT / "last.pth")          # crash insurance, every epoch
+        torch.save(ema.module.state_dict(), OUT / "last_ema.pth")
         writer.writerow(row); log.flush()
         print(msg)
 
-    print(f"done. best mAP@10 = {best_map:.4f}  (without VeRi: 0.7019)")
+    print(f"done. best normal = {best['normal']:.4f} | best EMA = {best['ema']:.4f} "
+          f"(reference: Small without EMA 0.6575)")
 
 
 if __name__ == "__main__":
