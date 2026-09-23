@@ -5,7 +5,7 @@ Final training recipe (fixed by validation):
 
   python train_final.py --model base     -> weights/base.pth   (all of train.csv)
   python train_final.py --model small    -> weights/small.pth
-  optional: --train-csv <csv> --out <dir>   (used for the second validation split)
+  optional: --train-csv <csv> --out <dir> --seed <n>
 """
 import argparse
 import math
@@ -18,10 +18,11 @@ import torch
 from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from torch.utils.data import DataLoader
 
-from data import TrainSet, PKSampler
+from data import TrainSet, PKSampler, STRONG_LIGHT_AUG
 from losses import ReIDLoss
 from model import ReIDModel
 
+ROOT = Path(__file__).resolve().parent
 BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m"}
 SCHEDULE_EPOCHS, STOP_EPOCH, WARMUP_EPOCHS = 30, 15, 3
 LR_BACKBONE, LR_HEAD, WEIGHT_DECAY, EMA_DECAY = 1e-4, 1e-3, 1e-4, 0.998
@@ -32,16 +33,19 @@ torch.backends.cudnn.benchmark = True
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=BACKBONES, required=True)
-    ap.add_argument("--train-csv", default="C:/falcon/data/train.csv")
-    ap.add_argument("--out", default="C:/falcon/weights")
+    ap.add_argument("--train-csv", default=str(ROOT / "data" / "train.csv"))
+    ap.add_argument("--out", default=str(ROOT / "weights"))
+    ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
-    random.seed(0); np.random.seed(0); torch.manual_seed(0)
+    assert not STRONG_LIGHT_AUG, "strong light augmentation was rejected: set it to False in data.py"
+    random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
+    name = args.model if args.seed == 0 else f"{args.model}_seed{args.seed}"
 
     ds = TrainSet(Path(args.train_csv))
-    print(f"[{args.model}] training on {ds.num_classes} cars, {len(ds)} photos -> {out_dir}")
+    print(f"[{name}] training on {ds.num_classes} cars, {len(ds)} photos -> {out_dir}")
     loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=16, K=4),
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
@@ -81,12 +85,12 @@ def main():
             ema.update_parameters(model)
             sums += [loss.item(), id_l, tri_l]
         avg = sums / steps_per_epoch
-        torch.save(ema.module.state_dict(), out_dir / f"{args.model}_ema_last.pth")   # crash insurance
-        print(f"[{args.model}] epoch {epoch:2d}/{STOP_EPOCH} | loss {avg[0]:.3f} "
+        torch.save(ema.module.state_dict(), out_dir / f"{name}_ema_last.pth")   # crash insurance
+        print(f"[{name}] epoch {epoch:2d}/{STOP_EPOCH} | loss {avg[0]:.3f} "
               f"(id {avg[1]:.3f}, tri {avg[2]:.3f}) | {time.time() - start:.0f}s")
 
-    torch.save(ema.module.state_dict(), out_dir / f"{args.model}.pth")
-    print(f"[{args.model}] saved final EMA model -> {out_dir / (args.model + '.pth')}")
+    torch.save(ema.module.state_dict(), out_dir / f"{name}.pth")
+    print(f"[{name}] saved final EMA model -> {out_dir / (name + '.pth')}")
 
 
 if __name__ == "__main__":

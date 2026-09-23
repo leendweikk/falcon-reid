@@ -12,24 +12,27 @@ from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from torch.utils.data import DataLoader
 
 import evaluate as official                 # the organizers' evaluate.py
-from data import TrainSet, PKSampler, test_transform, CROPS
+from data import TrainSet, PKSampler, test_transform, CROPS, INPUT_HW
 from losses import ReIDLoss
 from model import ReIDModel
 
+ROOT = Path(__file__).resolve().parent
+
 # ----------------------------- settings -----------------------------
-RUN_NAME = "convnext_s_v2_ema"
-BACKBONE = "convnext_small.dinov3_lvd1689m"
+RUN_NAME = "convnext_b_v8_rect"
+BACKBONE = "convnext_base.dinov3_lvd1689m"
 HEAD = "linear"                             # "linear" or "cosface"
 TRIPLET_MARGIN = None                       # None = soft-margin triplet, 0.3 = classic
-SPLITS = Path("C:/falcon/data/splits")
+SPLITS = ROOT / "data" / "splits"           # seed-42 split: all our comparisons live here
 TRAIN_CSVS = [SPLITS / "train_split.csv"]   # ONLY our own data (no VeRi)
 EMA_DECAY = 0.998                           # smoothed copy ~ average of the last ~500 steps
-EPOCHS = 30
+EPOCHS = 30                                 # length of the LR schedule (keep 30 for fair comparison)
+STOP_EPOCH = 20                             # EMA peaks ~15; no need to run all 30
 WARMUP_EPOCHS = 3
 LR_BACKBONE, LR_HEAD = 1e-4, 1e-3
 WEIGHT_DECAY = 1e-4
 EVAL_EVERY = 5
-OUT = Path("C:/falcon/runs") / RUN_NAME
+OUT = ROOT / "runs" / RUN_NAME
 # --------------------------------------------------------------------
 
 torch.backends.cudnn.benchmark = True       # free speedup for fixed-size images
@@ -61,7 +64,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
 
     ds = TrainSet(TRAIN_CSVS)
-    print(f"training on {ds.num_classes} cars, {len(ds)} photos")
+    print(f"training on {ds.num_classes} cars, {len(ds)} photos | input (h, w) = {INPUT_HW}")
     loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=16, K=4),
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
@@ -96,7 +99,7 @@ def main():
     writer.writerow(["epoch", "loss", "id_loss", "tri_loss", "mAP@10", "Rank-1", "Rank-5",
                      "EMA_mAP@10", "EMA_Rank-1", "EMA_Rank-5", "seconds"])
 
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(1, STOP_EPOCH + 1):
         start, sums = time.time(), np.zeros(3)
         for imgs, labels in loader:
             imgs, labels = imgs.cuda(non_blocking=True), labels.cuda(non_blocking=True)
@@ -117,7 +120,7 @@ def main():
         row = [epoch, *np.round(avg, 4), "", "", "", "", "", "", round(secs)]
         msg = f"epoch {epoch:2d} | loss {avg[0]:.3f} (id {avg[1]:.3f}, tri {avg[2]:.3f}) | {secs:.0f}s"
 
-        if epoch == 1 or epoch % EVAL_EVERY == 0 or epoch == EPOCHS:
+        if epoch == 1 or epoch % EVAL_EVERY == 0 or epoch == STOP_EPOCH:
             for kind, net, col in [("normal", model, 4), ("ema", ema.module, 7)]:
                 m = validate(net, q_ids, g_ids, gt_query, gt_gallery)
                 row[col:col + 3] = [round(m["mAP@10"], 4), round(m["Rank-1"], 4), round(m["Rank-5"], 4)]
@@ -133,7 +136,7 @@ def main():
         print(msg)
 
     print(f"done. best normal = {best['normal']:.4f} | best EMA = {best['ema']:.4f} "
-          f"(reference: Small without EMA 0.6575)")
+          f"(reference Base EMA 256x256: ep10 0.7354 | ep15 0.7554 | ep20 0.7452; seed noise ~0.7)")
 
 
 if __name__ == "__main__":

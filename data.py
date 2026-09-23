@@ -8,23 +8,32 @@ from PIL import Image
 from torch.utils.data import Dataset, Sampler
 from torchvision import transforms as T
 
-CROPS = Path("C:/falcon/data/crops")
-SIZE = 256
-MEAN, STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)   # same as the backbone printed
+CROPS = Path(__file__).resolve().parent / "data" / "crops"
+INPUT_HW = (256, 256)          # proven setting; (224, 288) was tested in Experiment 3 and REJECTED
+MEAN, STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
+STRONG_LIGHT_AUG = False       # Experiment 1 (night/glare augmentation) was tested and REJECTED
+
+if STRONG_LIGHT_AUG:
+    light = [
+        T.ColorJitter(brightness=(0.35, 1.4), contrast=(0.6, 1.4), saturation=(0.7, 1.3)),  # no hue
+        T.RandomApply([T.GaussianBlur(kernel_size=5, sigma=(0.1, 1.5))], p=0.2),             # night blur
+    ]
+else:
+    light = [T.ColorJitter(brightness=0.2, contrast=0.15)]                                   # proven setting
 
 train_transform = T.Compose([
-    T.Resize((SIZE, SIZE)),
+    T.Resize(INPUT_HW),
     T.RandomHorizontalFlip(p=0.5),
     T.Pad(10),
-    T.RandomCrop((SIZE, SIZE)),
-    T.ColorJitter(brightness=0.2, contrast=0.15),   # no hue: color = identity
+    T.RandomCrop(INPUT_HW),
+    *light,
     T.ToTensor(),
     T.Normalize(MEAN, STD),
     T.RandomErasing(p=0.5, value="random"),
 ])
 
 test_transform = T.Compose([
-    T.Resize((SIZE, SIZE)),
+    T.Resize(INPUT_HW),
     T.ToTensor(),
     T.Normalize(MEAN, STD),
 ])
@@ -71,14 +80,3 @@ class PKSampler(Sampler):
 
     def __len__(self):
         return len(self.by_label) // self.P
-
-
-if __name__ == "__main__":
-    splits = Path("C:/falcon/data/splits")
-    ds = TrainSet([splits / "train_split.csv", splits / "veri.csv"])
-    loader = torch.utils.data.DataLoader(ds, batch_sampler=PKSampler(ds), num_workers=4)
-    imgs, labels = next(iter(loader))
-    print("cars in training set:", ds.num_classes)
-    print("photos in training set:", len(ds))
-    print("batches per epoch:", len(loader))
-    print("batch images:", tuple(imgs.shape))
