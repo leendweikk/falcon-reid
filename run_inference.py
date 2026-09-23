@@ -66,7 +66,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--base-weights", default="weights/base.pth")
     ap.add_argument("--small-weights", default="weights/small.pth")
-    ap.add_argument("--threshold", type=float, default=0.66)    # plateau center, validation
+    ap.add_argument("--threshold", type=float, default=0.72)    # plateau center, validation
     ap.add_argument("--no-rerank", action="store_true")
     ap.add_argument("--k1", type=int, default=6)
     ap.add_argument("--k2", type=int, default=2)

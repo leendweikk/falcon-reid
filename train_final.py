@@ -1,11 +1,11 @@
 """
-Final training for submission: ALL of train.csv (1,541 cars), recipe fixed by validation.
+Final training recipe (fixed by validation):
   - 30-epoch LR schedule (3 warmup + cosine), stopped at epoch 15
-  - EMA (decay 0.998) copy at epoch 15 is saved as the final model
-No validation here: every car is used for training.
+  - EMA (decay 0.998) copy at epoch 15 is saved as the model
 
-  python train_final.py --model base     -> weights/base.pth
+  python train_final.py --model base     -> weights/base.pth   (all of train.csv)
   python train_final.py --model small    -> weights/small.pth
+  optional: --train-csv <csv> --out <dir>   (used for the second validation split)
 """
 import argparse
 import math
@@ -23,7 +23,6 @@ from losses import ReIDLoss
 from model import ReIDModel
 
 BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m"}
-TRAIN_CSV = Path("C:/falcon/data/train.csv")
 SCHEDULE_EPOCHS, STOP_EPOCH, WARMUP_EPOCHS = 30, 15, 3
 LR_BACKBONE, LR_HEAD, WEIGHT_DECAY, EMA_DECAY = 1e-4, 1e-3, 1e-4, 0.998
 
@@ -33,14 +32,16 @@ torch.backends.cudnn.benchmark = True
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=BACKBONES, required=True)
+    ap.add_argument("--train-csv", default="C:/falcon/data/train.csv")
+    ap.add_argument("--out", default="C:/falcon/weights")
     args = ap.parse_args()
 
     random.seed(0); np.random.seed(0); torch.manual_seed(0)
-    out_dir = Path("C:/falcon/weights")
-    out_dir.mkdir(exist_ok=True)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    ds = TrainSet(TRAIN_CSV)
-    print(f"[{args.model}] training on {ds.num_classes} cars, {len(ds)} photos")
+    ds = TrainSet(Path(args.train_csv))
+    print(f"[{args.model}] training on {ds.num_classes} cars, {len(ds)} photos -> {out_dir}")
     loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=16, K=4),
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
