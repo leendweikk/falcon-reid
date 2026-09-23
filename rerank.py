@@ -31,12 +31,17 @@ def re_ranking(q, g, k1=6, k2=2, lam=0.3):
     return -final[:, len(q):]                                  # minus distance = similarity
 
 
-def re_ranking_streaming(q, g, k1=6, k2=2, lam=0.3):
+def re_ranking_streaming(q, g, k1=6, k2=2, lam=0.3, topk=None):
     """ALLOWED version (organizers' answer 23.09): each query is re-ranked alone
-    against the static gallery and never sees other queries."""
-    out = []
+    against the static gallery and never sees other queries.
+    topk: re-rank only the top-k cosine candidates (fast, scalable); None = whole gallery."""
+    cos = q @ g.T
+    out = np.full_like(cos, -np.inf)
     for i in range(len(q)):
-        out.append(re_ranking(q[i:i + 1], g, k1, k2, lam))
+        idx = np.arange(len(g)) if topk is None else np.argsort(-cos[i])[:topk]
+        out[i, idx] = re_ranking(q[i:i + 1], g[idx], k1, k2, lam)[0]
+        rest = np.setdiff1d(np.arange(len(g)), idx)
+        out[i, rest] = cos[i, rest] - 10.0          # below all re-ranked items, keep cosine order
         if (i + 1) % 200 == 0:
             print(f"  re-ranking: {i + 1}/{len(q)} queries")
-    return np.concatenate(out)
+    return out

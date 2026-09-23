@@ -66,10 +66,11 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--base-weights", default="weights/base.pth")
     ap.add_argument("--small-weights", default="weights/small.pth")
-    ap.add_argument("--threshold", type=float, default=0.564)
+    ap.add_argument("--threshold", type=float, default=0.66)    # plateau center, validation
     ap.add_argument("--no-rerank", action="store_true")
     ap.add_argument("--k1", type=int, default=6)
     ap.add_argument("--k2", type=int, default=2)
+    ap.add_argument("--topk", type=int, default=100)            # re-rank only top-100 candidates
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -94,7 +95,7 @@ def main():
 
     cos = q_emb @ g_emb.T
     t0 = time.time()
-    sims = cos if args.no_rerank else re_ranking_streaming(q_emb, g_emb, args.k1, args.k2)
+    sims = cos if args.no_rerank else re_ranking_streaming(q_emb, g_emb, args.k1, args.k2, topk=args.topk)
     t_rerank = time.time() - t0
     order = np.argsort(-sims, axis=1)[:, :10]
     q_ids, g_ids = q_df.image_id.tolist(), g_df.image_id.tolist()
@@ -115,7 +116,7 @@ def main():
     n = len(q_ids) + len(g_ids)
     print(f"done -> {out}")
     print(f"embedding: {t_embed:.1f}s for {n} images ({1000 * t_embed / n:.1f} ms/image, batch 32)")
-    print(f"re-ranking: {t_rerank:.1f}s for {len(q_ids)} queries")
+    print(f"re-ranking: {t_rerank:.1f}s for {len(q_ids)} queries ({1000 * t_rerank / len(q_ids):.1f} ms/query)")
     print(f"answered {(conf >= args.threshold).sum()}/{len(q_ids)} (threshold {args.threshold})")
 
 
