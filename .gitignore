@@ -1,0 +1,7 @@
+data/
+external/
+runs/
+*.pth
+*.npy
+.venv/
+__pycache__/
