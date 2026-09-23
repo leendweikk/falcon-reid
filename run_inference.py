@@ -41,7 +41,7 @@ def crop_car(files, row):
 
 
 @torch.no_grad()
-def embed_all(models, df, files, device, batch_size=32):
+def embed_all(models, df, files, device, batch_size=32, flip=True):
     use_fp16 = device.type == "cuda"
     out = []
     for i in range(0, len(df), batch_size):
@@ -50,7 +50,9 @@ def embed_all(models, df, files, device, batch_size=32):
         parts = []
         for model, weight in models:
             with torch.autocast(device.type, dtype=torch.float16, enabled=use_fp16):
-                f = model(batch) + model(torch.flip(batch, dims=[3]))       # flip averaging
+                f = model(batch)
+                if flip:
+                    f = f + model(torch.flip(batch, dims=[3]))                   # flip averaging
             f = torch.nn.functional.normalize(f.float(), dim=1)
             parts.append(np.sqrt(weight) * f)                                # glued ensemble
         out.append(torch.cat(parts, dim=1).cpu())
@@ -72,6 +74,8 @@ def main():
     ap.add_argument("--k1", type=int, default=6)
     ap.add_argument("--k2", type=int, default=2)
     ap.add_argument("--topk", type=int, default=100)            # re-rank only top-100 candidates
+    ap.add_argument("--no-flip", action="store_true", help="skip flip averaging (2x faster, speed/accuracy trade-off)")
+    ap.add_argument("--base-only", action="store_true", help="use only the Base model (no ensemble)")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -83,12 +87,13 @@ def main():
     g_df = pd.read_csv(args.gallery, dtype={"image_id": str})
     files = {p.stem: p for p in Path(args.images).iterdir()}
 
-    models = [(load_model("convnext_base.dinov3_lvd1689m", args.base_weights, device), 0.6),
-              (load_model("convnext_small.dinov3_lvd1689m", args.small_weights, device), 0.4)]
+    models = [(load_model("convnext_base.dinov3_lvd1689m", args.base_weights, device), 1.0 if args.base_only else 0.6)]
+    if not args.base_only:
+        models.append((load_model("convnext_small.dinov3_lvd1689m", args.small_weights, device), 0.4))
 
     t0 = time.time()
-    q_emb = embed_all(models, q_df, files, device)
-    g_emb = embed_all(models, g_df, files, device)
+    q_emb = embed_all(models, q_df, files, device, flip=not args.no_flip)
+    g_emb = embed_all(models, g_df, files, device, flip=not args.no_flip)
     t_embed = time.time() - t0
 
     # 1) embeddings.npy: queries first, then gallery, in CSV order
