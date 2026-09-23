@@ -18,9 +18,9 @@ import torch
 from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from torch.utils.data import DataLoader
 
-from data import TrainSet, PKSampler, STRONG_LIGHT_AUG
-from losses import ReIDLoss
-from model import ReIDModel
+from reid.data import TrainSet, PKSampler, STRONG_LIGHT_AUG
+from reid.losses import ReIDLoss
+from reid.model import ReIDModel
 
 ROOT = Path(__file__).resolve().parent
 BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m"}

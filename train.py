@@ -1,3 +1,4 @@
+import argparse
 import csv
 import math
 import random
@@ -11,28 +12,29 @@ from PIL import Image
 from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from torch.utils.data import DataLoader
 
-import evaluate as official                 # the organizers' evaluate.py
-from data import TrainSet, PKSampler, test_transform, CROPS, INPUT_HW
-from losses import ReIDLoss
-from model import ReIDModel
+from reid import evaluate as official                 # the organizers' evaluate.py
+from reid.data import TrainSet, PKSampler, test_transform, CROPS, INPUT_HW
+from reid.losses import ReIDLoss
+from reid.model import ReIDModel
 
 ROOT = Path(__file__).resolve().parent
 
 # ----------------------------- settings -----------------------------
-RUN_NAME = "convnext_b_v8_rect"
-BACKBONE = "convnext_base.dinov3_lvd1689m"
-HEAD = "linear"                             # "linear" or "cosface"
-TRIPLET_MARGIN = None                       # None = soft-margin triplet, 0.3 = classic
-SPLITS = ROOT / "data" / "splits"           # seed-42 split: all our comparisons live here
-TRAIN_CSVS = [SPLITS / "train_split.csv"]   # ONLY our own data (no VeRi)
+# Validation run of the final recipe on the seed-42 split (the split all our comparisons use).
+#   python train.py --model base  --run-name val_base_ema    (paper trail: runs/convnext_b_v6_ema, EMA ep15 = 0.7554)
+#   python train.py --model small --run-name val_small_ema   (paper trail: runs/convnext_s_v2_ema, EMA ep15 = 0.7306)
+BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m"}
+HEAD = "linear"                             # "cosface" was tested and rejected (overfits)
+TRIPLET_MARGIN = None                       # None = soft-margin triplet (kept); 0.3 = classic
+SPLITS = ROOT / "data" / "splits"
+TRAIN_CSVS = [SPLITS / "train_split.csv"]   # ONLY the organizers' data (VeRi rejected: visible plates)
 EMA_DECAY = 0.998                           # smoothed copy ~ average of the last ~500 steps
-EPOCHS = 30                                 # length of the LR schedule (keep 30 for fair comparison)
-STOP_EPOCH = 20                             # EMA peaks ~15; no need to run all 30
+EPOCHS = 30                                 # length of the LR schedule
+STOP_EPOCH = 20                             # EMA peaks ~15 (plateau 10-20); final models use the EMA at 15
 WARMUP_EPOCHS = 3
 LR_BACKBONE, LR_HEAD = 1e-4, 1e-3
 WEIGHT_DECAY = 1e-4
 EVAL_EVERY = 5
-OUT = ROOT / "runs" / RUN_NAME
 # --------------------------------------------------------------------
 
 torch.backends.cudnn.benchmark = True       # free speedup for fixed-size images
@@ -60,6 +62,13 @@ def validate(model, q_ids, g_ids, gt_query, gt_gallery):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", choices=BACKBONES, default="base")
+    ap.add_argument("--run-name", default=None)
+    args = ap.parse_args()
+    BACKBONE = BACKBONES[args.model]
+    OUT = ROOT / "runs" / (args.run_name or f"val_{args.model}_ema")
+
     random.seed(0); np.random.seed(0); torch.manual_seed(0)
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -136,7 +145,7 @@ def main():
         print(msg)
 
     print(f"done. best normal = {best['normal']:.4f} | best EMA = {best['ema']:.4f} "
-          f"(reference Base EMA 256x256: ep10 0.7354 | ep15 0.7554 | ep20 0.7452; seed noise ~0.7)")
+          f"(reference: Base EMA ep15 0.7554, Small EMA ep15 0.7306; seed-to-seed noise ~0.7)")
 
 
 if __name__ == "__main__":

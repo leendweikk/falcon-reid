@@ -8,7 +8,7 @@ from PIL import Image
 from torch.utils.data import Dataset, Sampler
 from torchvision import transforms as T
 
-CROPS = Path(__file__).resolve().parent / "data" / "crops"
+CROPS = Path(__file__).resolve().parents[1] / "data" / "crops"     # <project>/data/crops
 INPUT_HW = (256, 256)          # proven setting; (224, 288) was tested in Experiment 3 and REJECTED
 MEAN, STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
 STRONG_LIGHT_AUG = False       # Experiment 1 (night/glare augmentation) was tested and REJECTED

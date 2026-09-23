@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]      # project root (this file lives in experiments/)
+sys.path.insert(0, str(ROOT))                   # so `import reid` works when run from anywhere
+
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -6,9 +12,9 @@ import timm
 from PIL import Image
 from torchvision import transforms as T
 
-DATA = Path("C:/falcon/data")
+DATA = (ROOT / "data")
 SPLITS = DATA / "splits"
-OUT = Path("C:/falcon/runs/frozen")
+OUT = (ROOT / "runs" / "frozen")
 OUT.mkdir(parents=True, exist_ok=True)
 MODEL = "convnext_small.dinov3_lvd1689m"
 SIZE = 256

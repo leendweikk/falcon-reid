@@ -8,7 +8,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-SPLITS = Path("C:/falcon/data/splits")
+ROOT = Path(__file__).resolve().parent
+
+SPLITS = (ROOT / "data" / "splits")
 val_dir, test_dir, val_thr = Path(sys.argv[1]), Path(sys.argv[2]), float(sys.argv[3])
 
 gt = pd.read_csv(SPLITS / "val_gt.csv", dtype={"image_id": str})

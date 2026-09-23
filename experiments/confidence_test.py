@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]      # project root (this file lives in experiments/)
+sys.path.insert(0, str(ROOT))                   # so `import reid` works when run from anywhere
+
 from pathlib import Path
 
 import numpy as np
@@ -7,10 +13,10 @@ from sklearn.model_selection import GroupKFold, cross_val_predict
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-import evaluate as official
+from reid import evaluate as official
 
-SPLITS = Path("C:/falcon/data/splits")
-RUNS = Path("C:/falcon/runs")
+SPLITS = (ROOT / "data" / "splits")
+RUNS = (ROOT / "runs")
 
 q_ids = pd.read_csv(SPLITS / "val_query.csv", dtype={"image_id": str}).image_id.tolist()
 g_ids = pd.read_csv(SPLITS / "val_gallery.csv", dtype={"image_id": str}).image_id.tolist()

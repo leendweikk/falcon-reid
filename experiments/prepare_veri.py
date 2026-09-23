@@ -1,12 +1,18 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]      # project root (this file lives in experiments/)
+sys.path.insert(0, str(ROOT))                   # so `import reid` works when run from anywhere
+
 from pathlib import Path
 
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 
-VERI = Path("C:/falcon/external/veri/VeRi")
-CROPS = Path("C:/falcon/data/crops")
-OUT_CSV = Path("C:/falcon/data/splits/veri.csv")
+VERI = (ROOT / "external" / "veri" / "VeRi")
+CROPS = (ROOT / "data" / "crops")
+OUT_CSV = (ROOT / "data" / "splits" / "veri.csv")
 LONG_SIDE = 384
 ID_OFFSET = 100000          # VeRi car ids become 100001, 100002, ... (never clash with ours)
 

@@ -4,7 +4,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DATA = Path("C:/falcon/data")
+ROOT = Path(__file__).resolve().parent
+
+DATA = (ROOT / "data")
 SEED = int(sys.argv[1]) if len(sys.argv) > 1 else 42          # 42 = our original split
 OUT = DATA / ("splits" if SEED == 42 else f"splits_seed{SEED}")
 OUT.mkdir(exist_ok=True)

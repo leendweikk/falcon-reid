@@ -4,9 +4,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import evaluate as official
+from reid import evaluate as official
 
-SPLITS = Path("C:/falcon/data/splits")
+ROOT = Path(__file__).resolve().parent
+
+SPLITS = (ROOT / "data" / "splits")
 pred = Path(sys.argv[1])                       # folder with all_candidates.csv
 
 query, gallery = official.load_gt(SPLITS / "val_gt.csv")

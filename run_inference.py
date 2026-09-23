@@ -15,10 +15,11 @@ import pandas as pd
 import torch
 from PIL import Image
 
-from data import test_transform
-from model import ReIDModel
-from rerank import re_ranking_streaming
+from reid.data import test_transform
+from reid.model import ReIDModel
+from reid.rerank import re_ranking_streaming
 
+ROOT = Path(__file__).resolve().parent
 LONG_SIDE = 384        # identical to make_crops.py: crop by box, longer side -> 384, then 256x256
 
 
@@ -64,8 +65,8 @@ def main():
     ap.add_argument("--query", required=True)
     ap.add_argument("--gallery", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--base-weights", default="weights/base.pth")
-    ap.add_argument("--small-weights", default="weights/small.pth")
+    ap.add_argument("--base-weights", default=str(ROOT / "weights" / "base.pth"))
+    ap.add_argument("--small-weights", default=str(ROOT / "weights" / "small.pth"))
     ap.add_argument("--threshold", type=float, default=0.72)    # plateau center, validation
     ap.add_argument("--no-rerank", action="store_true")
     ap.add_argument("--k1", type=int, default=6)

@@ -1,12 +1,18 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]      # project root (this file lives in experiments/)
+sys.path.insert(0, str(ROOT))                   # so `import reid` works when run from anywhere
+
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-import evaluate as official
+from reid import evaluate as official
 
-SPLITS = Path("C:/falcon/data/splits")
-PRED = Path("C:/falcon/runs/convnext_b_v2_softmargin/val_pred")
+SPLITS = (ROOT / "data" / "splits")
+PRED = (ROOT / "runs" / "convnext_b_v2_softmargin" / "val_pred")
 
 q_ids = pd.read_csv(SPLITS / "val_query.csv", dtype={"image_id": str}).image_id.tolist()
 g_ids = pd.read_csv(SPLITS / "val_gallery.csv", dtype={"image_id": str}).image_id.tolist()

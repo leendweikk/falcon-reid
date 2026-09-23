@@ -1,14 +1,20 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]      # project root (this file lives in experiments/)
+sys.path.insert(0, str(ROOT))                   # so `import reid` works when run from anywhere
+
 import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-import evaluate as official
-from rerank import re_ranking_streaming
+from reid import evaluate as official
+from reid.rerank import re_ranking_streaming
 
-SPLITS = Path("C:/falcon/data/splits")
-PRED = Path("C:/falcon/runs/pipeline_val_ema")
+SPLITS = (ROOT / "data" / "splits")
+PRED = (ROOT / "runs" / "pipeline_val_ema")
 
 q_ids = pd.read_csv(SPLITS / "val_query.csv", dtype={"image_id": str}).image_id.tolist()
 g_ids = pd.read_csv(SPLITS / "val_gallery.csv", dtype={"image_id": str}).image_id.tolist()

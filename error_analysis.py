@@ -68,7 +68,8 @@ lines = [f"queries scored: {len(df)} | mAP@10 {df.AP.mean():.4f} | "
 
 
 def by_quartile(col, label):
-    qs = pd.qcut(df[col], 4, labels=["Q1 (lowest)", "Q2", "Q3", "Q4 (highest)"], duplicates="drop")
+    qs = pd.qcut(df[col].rank(method="first"), 4,                        # rank first: robust to repeated values
+                 labels=["Q1 (lowest)", "Q2", "Q3", "Q4 (highest)"])
     t = df.groupby(qs, observed=True).agg(mAP=("AP", "mean"),
                                           fail_rate=("first_correct_rank", lambda r: (r > 5).mean()),
                                           range_min=(col, "min"), range_max=(col, "max"))

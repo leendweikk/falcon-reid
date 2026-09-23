@@ -3,7 +3,9 @@ import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 
-DATA = Path("C:/falcon/data")
+ROOT = Path(__file__).resolve().parent
+
+DATA = (ROOT / "data")
 
 # 1. Build a lookup: image_id (file name without extension) -> real file path
 files = {p.stem: p for p in (DATA / "images").iterdir()}

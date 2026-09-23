@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]      # project root (this file lives in experiments/)
+sys.path.insert(0, str(ROOT))                   # so `import reid` works when run from anywhere
+
 import argparse
 from pathlib import Path
 
@@ -6,14 +12,14 @@ import pandas as pd
 import torch
 from PIL import Image
 
-from data import test_transform, CROPS
-from model import ReIDModel
+from reid.data import test_transform, CROPS
+from reid.model import ReIDModel
 
 
 def load_model(ckpt_path, backbone="convnext_base.dinov3_lvd1689m"):
     state = torch.load(ckpt_path, map_location="cpu")
     num_classes = state["classifier.weight"].shape[0]      # 1241 (val model) or 1541 (final)
-    model = ReIDModel(num_classes=num_classes, backbone=backbone)
+    model = ReIDModel(num_classes=num_classes, backbone=backbone, pretrained=False)   # offline: our weights overwrite everything
     model.load_state_dict(state)
     return model.cuda().eval()
 

@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]      # project root (this file lives in experiments/)
+sys.path.insert(0, str(ROOT))                   # so `import reid` works when run from anywhere
+
 from pathlib import Path
 import torch
 import timm
@@ -15,7 +21,7 @@ transform = timm.data.create_transform(**cfg)
 print("expected input:", cfg["input_size"], " mean:", cfg["mean"], " std:", cfg["std"])
 
 # take any one crop and turn it into an embedding
-crop_path = next(Path("C:/falcon/data/crops").iterdir())
+crop_path = next((ROOT / "data" / "crops").iterdir())
 img = transform(Image.open(crop_path).convert("RGB")).unsqueeze(0).cuda()
 
 with torch.no_grad():

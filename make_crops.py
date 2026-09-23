@@ -3,7 +3,9 @@ import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 
-DATA = Path("C:/falcon/data")
+ROOT = Path(__file__).resolve().parent
+
+DATA = (ROOT / "data")
 OUT = DATA / "crops"
 OUT.mkdir(exist_ok=True)
 LONG_SIDE = 384   # longer side of each saved crop, in pixels
