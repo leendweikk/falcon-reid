@@ -24,7 +24,8 @@ from reid.losses import ReIDLoss
 from reid.model import ReIDModel
 
 ROOT = Path(__file__).resolve().parent
-BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m"}
+BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m",
+             "vit": "vit_base_patch16_dinov3.lvd1689m"}
 SCHEDULE_EPOCHS, STOP_EPOCH, WARMUP_EPOCHS = 30, 15, 3
 LR_BACKBONE, LR_HEAD, WEIGHT_DECAY, EMA_DECAY = 1e-4, 1e-3, 1e-4, 0.998
 
@@ -37,7 +38,9 @@ def main():
     ap.add_argument("--train-csv", default=str(ROOT / "data" / "train.csv"))
     ap.add_argument("--out", default=str(ROOT / "weights"))
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--lr-backbone", type=float, default=LR_BACKBONE)
     ap.add_argument("--size", type=int, default=256, help="square input size (256 = proven)")
+    ap.add_argument("--lr-backbone", type=float, default=LR_BACKBONE)
     args = ap.parse_args()
 
     assert not STRONG_LIGHT_AUG, "strong light augmentation was rejected: set it to False in data.py"
@@ -57,7 +60,7 @@ def main():
     loss_fn = ReIDLoss(margin=None, smoothing=0.1)                 # soft-margin triplet
 
     optimizer = torch.optim.AdamW([
-        {"params": model.backbone.parameters(), "lr": LR_BACKBONE},
+        {"params": model.backbone.parameters(), "lr": args.lr_backbone},
         {"params": list(model.bnneck.parameters()) + list(model.classifier.parameters()), "lr": LR_HEAD},
     ], weight_decay=WEIGHT_DECAY)
 
