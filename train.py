@@ -24,7 +24,9 @@ ROOT = Path(__file__).resolve().parent
 #   python train.py --model base  --run-name val_base_ema    (paper trail: runs/convnext_b_v6_ema, EMA ep15 = 0.7554)
 #   python train.py --model small --run-name val_small_ema   (paper trail: runs/convnext_s_v2_ema, EMA ep15 = 0.7306)
 #   python train.py --model base --size 320 --run-name val_base_320   (Experiment: bigger input)
-BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m"}
+BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m",
+             "vit": "vit_base_patch16_dinov3.lvd1689m"}      # Experiment: a different model family
+#   python train.py --model vit --lr-backbone 5e-5 --run-name val_vit
 HEAD = "linear"                             # "cosface" was tested and rejected (overfits)
 TRIPLET_MARGIN = None                       # None = soft-margin triplet (kept); 0.3 = classic
 SPLITS = ROOT / "data" / "splits"
@@ -66,7 +68,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=BACKBONES, default="base")
     ap.add_argument("--run-name", default=None)
-    ap.add_argument("--size", type=int, default=256, help="square input size (256 = proven)")
+    ap.add_argument("--size", type=int, default=256, help="square input size (256 = proven; 320 rejected)")
+    ap.add_argument("--lr-backbone", type=float, default=LR_BACKBONE)
     args = ap.parse_args()
     BACKBONE = BACKBONES[args.model]
     OUT = ROOT / "runs" / (args.run_name or f"val_{args.model}_ema")
@@ -77,7 +80,8 @@ def main():
     input_hw = (args.size, args.size)
     train_tf, test_tf = make_transforms(input_hw)
     ds = TrainSet(TRAIN_CSVS, transform=train_tf)
-    print(f"training on {ds.num_classes} cars, {len(ds)} photos | input (h, w) = {input_hw}")
+    print(f"training {BACKBONE} on {ds.num_classes} cars, {len(ds)} photos | input (h, w) = {input_hw} "
+          f"| backbone lr {args.lr_backbone:g}")
     loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=16, K=4),
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
@@ -86,7 +90,7 @@ def main():
     loss_fn = ReIDLoss(margin=TRIPLET_MARGIN, smoothing=0.1)
 
     optimizer = torch.optim.AdamW([
-        {"params": model.backbone.parameters(), "lr": LR_BACKBONE},
+        {"params": model.backbone.parameters(), "lr": args.lr_backbone},
         {"params": list(model.bnneck.parameters()) + list(model.classifier.parameters()), "lr": LR_HEAD},
     ], weight_decay=WEIGHT_DECAY)
 
