@@ -69,13 +69,14 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--base-weights", default=str(ROOT / "weights" / "base.pth"))
     ap.add_argument("--small-weights", default=str(ROOT / "weights" / "small.pth"))
-    ap.add_argument("--threshold", type=float, default=0.72)    # plateau center, validation
+    ap.add_argument("--threshold", type=float, default=0.72)   # inside the plateau for BOTH modes (checked on 2 splits)
     ap.add_argument("--no-rerank", action="store_true")
     ap.add_argument("--k1", type=int, default=6)
     ap.add_argument("--k2", type=int, default=2)
     ap.add_argument("--topk", type=int, default=100)            # re-rank only top-100 candidates
-    ap.add_argument("--no-flip", action="store_true", help="skip flip averaging (2x faster, speed/accuracy trade-off)")
-    ap.add_argument("--base-only", action="store_true", help="use only the Base model (no ensemble)")
+    ap.add_argument("--mode", choices=["fast", "accurate"], default="fast",
+                    help="fast (default): Base model, no flip -> 78.9%% val mAP@10, 38 ms/car GPU, 218 ms/car CPU. "
+                         "accurate: Base+Small ensemble with flip -> 80.4%%, 130 ms/car GPU, 546 ms/car CPU.")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -87,13 +88,15 @@ def main():
     g_df = pd.read_csv(args.gallery, dtype={"image_id": str})
     files = {p.stem: p for p in Path(args.images).iterdir()}
 
-    models = [(load_model("convnext_base.dinov3_lvd1689m", args.base_weights, device), 1.0 if args.base_only else 0.6)]
-    if not args.base_only:
+    accurate = args.mode == "accurate"
+    print("mode:", args.mode)
+    models = [(load_model("convnext_base.dinov3_lvd1689m", args.base_weights, device), 0.6 if accurate else 1.0)]
+    if accurate:
         models.append((load_model("convnext_small.dinov3_lvd1689m", args.small_weights, device), 0.4))
 
     t0 = time.time()
-    q_emb = embed_all(models, q_df, files, device, flip=not args.no_flip)
-    g_emb = embed_all(models, g_df, files, device, flip=not args.no_flip)
+    q_emb = embed_all(models, q_df, files, device, flip=accurate)
+    g_emb = embed_all(models, g_df, files, device, flip=accurate)
     t_embed = time.time() - t0
 
     # 1) embeddings.npy: queries first, then gallery, in CSV order
