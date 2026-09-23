@@ -21,28 +21,35 @@ if STRONG_LIGHT_AUG:
 else:
     light = [T.ColorJitter(brightness=0.2, contrast=0.15)]                                   # proven setting
 
-train_transform = T.Compose([
-    T.Resize(INPUT_HW),
-    T.RandomHorizontalFlip(p=0.5),
-    T.Pad(10),
-    T.RandomCrop(INPUT_HW),
-    *light,
-    T.ToTensor(),
-    T.Normalize(MEAN, STD),
-    T.RandomErasing(p=0.5, value="random"),
-])
+def make_transforms(hw):
+    """Train/test transforms for an input size (h, w). 256x256 is the proven default."""
+    train = T.Compose([
+        T.Resize(hw),
+        T.RandomHorizontalFlip(p=0.5),
+        T.Pad(10),
+        T.RandomCrop(hw),
+        *light,
+        T.ToTensor(),
+        T.Normalize(MEAN, STD),
+        T.RandomErasing(p=0.5, value="random"),
+    ])
+    test = T.Compose([
+        T.Resize(hw),
+        T.ToTensor(),
+        T.Normalize(MEAN, STD),
+    ])
+    return train, test
 
-test_transform = T.Compose([
-    T.Resize(INPUT_HW),
-    T.ToTensor(),
-    T.Normalize(MEAN, STD),
-])
+
+train_transform, test_transform = make_transforms(INPUT_HW)
 
 
 class TrainSet(Dataset):
     """Returns (image, car_label). Accepts one CSV path or a list of CSV paths (merged)."""
 
-    def __init__(self, csv_paths):
+    def __init__(self, csv_paths, transform=None):
+        # the transform is stored ON the dataset, so Windows worker processes get the right size
+        self.transform = transform or train_transform
         if not isinstance(csv_paths, (list, tuple)):
             csv_paths = [csv_paths]
         df = pd.concat([pd.read_csv(p, dtype={"image_id": str}) for p in csv_paths], ignore_index=True)
@@ -56,7 +63,7 @@ class TrainSet(Dataset):
     def __getitem__(self, i):
         image_id, label = self.items[i]
         img = Image.open(CROPS / f"{image_id}.jpg").convert("RGB")
-        return train_transform(img), label
+        return self.transform(img), label
 
 
 class PKSampler(Sampler):

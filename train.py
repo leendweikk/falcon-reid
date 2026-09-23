@@ -13,7 +13,7 @@ from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from torch.utils.data import DataLoader
 
 from reid import evaluate as official                 # the organizers' evaluate.py
-from reid.data import TrainSet, PKSampler, test_transform, CROPS, INPUT_HW
+from reid.data import TrainSet, PKSampler, CROPS, make_transforms
 from reid.losses import ReIDLoss
 from reid.model import ReIDModel
 
@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent
 # Validation run of the final recipe on the seed-42 split (the split all our comparisons use).
 #   python train.py --model base  --run-name val_base_ema    (paper trail: runs/convnext_b_v6_ema, EMA ep15 = 0.7554)
 #   python train.py --model small --run-name val_small_ema   (paper trail: runs/convnext_s_v2_ema, EMA ep15 = 0.7306)
+#   python train.py --model base --size 320 --run-name val_base_320   (Experiment: bigger input)
 BACKBONES = {"base": "convnext_base.dinov3_lvd1689m", "small": "convnext_small.dinov3_lvd1689m"}
 HEAD = "linear"                             # "cosface" was tested and rejected (overfits)
 TRIPLET_MARGIN = None                       # None = soft-margin triplet (kept); 0.3 = classic
@@ -41,7 +42,7 @@ torch.backends.cudnn.benchmark = True       # free speedup for fixed-size images
 
 
 @torch.no_grad()
-def embed(model, image_ids, batch_size=64):
+def embed(model, image_ids, test_transform, batch_size=64):
     model.eval()
     feats = []
     for i in range(0, len(image_ids), batch_size):
@@ -54,8 +55,8 @@ def embed(model, image_ids, batch_size=64):
     return torch.nn.functional.normalize(torch.cat(feats), dim=1).numpy()
 
 
-def validate(model, q_ids, g_ids, gt_query, gt_gallery):
-    q_emb, g_emb = embed(model, q_ids), embed(model, g_ids)
+def validate(model, q_ids, g_ids, gt_query, gt_gallery, test_transform):
+    q_emb, g_emb = embed(model, q_ids, test_transform), embed(model, g_ids, test_transform)
     order = np.argsort(-(q_emb @ g_emb.T), axis=1)[:, :10]
     ranked = {qid: [g_ids[j] for j in order[i]] for i, qid in enumerate(q_ids)}
     return official.ranking_metrics(gt_query, gt_gallery, ranked)   # official scoring code
@@ -65,6 +66,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=BACKBONES, default="base")
     ap.add_argument("--run-name", default=None)
+    ap.add_argument("--size", type=int, default=256, help="square input size (256 = proven)")
     args = ap.parse_args()
     BACKBONE = BACKBONES[args.model]
     OUT = ROOT / "runs" / (args.run_name or f"val_{args.model}_ema")
@@ -72,8 +74,10 @@ def main():
     random.seed(0); np.random.seed(0); torch.manual_seed(0)
     OUT.mkdir(parents=True, exist_ok=True)
 
-    ds = TrainSet(TRAIN_CSVS)
-    print(f"training on {ds.num_classes} cars, {len(ds)} photos | input (h, w) = {INPUT_HW}")
+    input_hw = (args.size, args.size)
+    train_tf, test_tf = make_transforms(input_hw)
+    ds = TrainSet(TRAIN_CSVS, transform=train_tf)
+    print(f"training on {ds.num_classes} cars, {len(ds)} photos | input (h, w) = {input_hw}")
     loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=16, K=4),
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
@@ -131,7 +135,7 @@ def main():
 
         if epoch == 1 or epoch % EVAL_EVERY == 0 or epoch == STOP_EPOCH:
             for kind, net, col in [("normal", model, 4), ("ema", ema.module, 7)]:
-                m = validate(net, q_ids, g_ids, gt_query, gt_gallery)
+                m = validate(net, q_ids, g_ids, gt_query, gt_gallery, test_tf)
                 row[col:col + 3] = [round(m["mAP@10"], 4), round(m["Rank-1"], 4), round(m["Rank-5"], 4)]
                 msg += f" | {kind} mAP@10 {m['mAP@10']:.4f}"
                 if m["mAP@10"] > best[kind]:
