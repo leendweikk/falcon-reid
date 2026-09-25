@@ -1,0 +1,3 @@
+# Local development only (NOT used in Docker): an embedded PostgreSQL + pgvector,
+# so the web service can run on a laptop without Docker (python service/dev_server.py).
+pgserver==0.1.4

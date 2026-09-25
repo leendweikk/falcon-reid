@@ -1,12 +1,14 @@
-# Falcon ReID — inference image (batch run that writes the three official files).
+# Falcon ReID — two images from one Dockerfile:
+#   target "infer"   : batch run that writes the three official files (what the organizers run)
+#   target "service" : the same inference code + FastAPI web service (docker-compose.yml)
 #
-#   docker build -t falcon-reid .
+#   docker build --target infer -t falcon-reid .
 #   docker run --rm --gpus all --network none \
 #       -v /path/to/dataset:/data:ro -v /path/to/output:/out falcon-reid
 #   (/data must contain images/, test_query.csv, test_gallery.csv)
 #
 # Build may use the internet (answer #39); running needs none: every weight is inside the image.
-FROM python:3.11-slim-bookworm
+FROM python:3.11-slim-bookworm AS infer
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -41,3 +43,15 @@ img = Image.fromarray((np.random.rand(480, 640, 3) * 255).astype('uint8')); \
 
 ENTRYPOINT ["python", "-m", "falcon.predict"]
 CMD ["--images", "/data/images", "--query", "/data/test_query.csv", "--gallery", "/data/test_gallery.csv", "--out", "/out"]
+
+
+# ---------------------------------------------------------------- web service (API) image
+FROM infer AS service
+COPY requirements-service.txt .
+RUN pip install -r requirements-service.txt \
+ && python -c "import torch; assert torch.version.cuda.startswith('12.'), 'torch was replaced: ' + torch.version.cuda"
+COPY service/__init__.py service/__init__.py
+COPY service/api/ service/api/
+EXPOSE 8000
+ENTRYPOINT []
+CMD ["uvicorn", "service.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

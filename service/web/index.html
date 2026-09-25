@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Falcon ReID — поиск ТС без номера</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Falcon ReID</h1>
+  <p class="sub">Поиск того же автомобиля по снимкам с разных камер — без использования госномера</p>
+  <div id="status" class="status">подключение…</div>
+</header>
+
+<nav>
+  <button class="tab active" data-tab="search">Поиск</button>
+  <button class="tab" data-tab="gallery">Галерея</button>
+</nav>
+
+<main>
+  <!-- ============ SEARCH ============ -->
+  <section id="tab-search">
+    <div class="card">
+      <h2>1. Снимок и рамка ТС</h2>
+      <input type="file" id="file" accept="image/jpeg,image/png">
+      <p class="hint">Загрузите кадр и выделите автомобиль мышью (или введите координаты рамки).</p>
+      <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+      <div class="bbox">
+        <label>x <input type="number" id="bx" min="0"></label>
+        <label>y <input type="number" id="by" min="0"></label>
+        <label>w <input type="number" id="bw" min="1"></label>
+        <label>h <input type="number" id="bh" min="1"></label>
+        <label>top-K <input type="number" id="topk" value="10" min="1" max="100"></label>
+        <button id="btn-search" class="primary" disabled>Найти</button>
+      </div>
+    </div>
+
+    <div class="card" id="result-card" hidden>
+      <h2>2. Результат</h2>
+      <div id="verdict" class="verdict"></div>
+      <div id="timing" class="hint"></div>
+      <div id="results" class="grid"></div>
+      <div class="actions">
+        <button id="btn-csv">Экспорт CSV</button>
+        <button id="btn-json">Экспорт JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GALLERY ============ -->
+  <section id="tab-gallery" hidden>
+    <div class="card">
+      <h2>Добавить ТС в галерею</h2>
+      <p class="hint">Используется тот же снимок и рамка, что на вкладке «Поиск».</p>
+      <div class="bbox">
+        <label>ID <input type="text" id="g-id" placeholder="авто"></label>
+        <label>камера <input type="text" id="g-cam"></label>
+        <label>метка <input type="text" id="g-label"></label>
+        <button id="btn-add" class="primary" disabled>Добавить</button>
+      </div>
+      <div id="add-msg" class="hint"></div>
+    </div>
+    <div class="card">
+      <h2>Галерея <span id="g-total"></span></h2>
+      <div class="actions">
+        <button id="g-prev">←</button><span id="g-page"></span><button id="g-next">→</button>
+        <a class="button" href="/api/gallery/export.csv">Экспорт CSV</a>
+        <a class="button" href="/api/docs" target="_blank">API (Swagger)</a>
+      </div>
+      <div id="gallery" class="grid"></div>
+    </div>
+  </section>
+</main>
+
+<footer>ЛЦТ 2026 · задача 7 «ФАЛЬКОН.Tech» · номерные знаки не используются</footer>
+<script src="app.js"></script>
+</body>
+</html>

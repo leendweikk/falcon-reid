@@ -1,17 +1,73 @@
-# One command (answer #41):  docker compose up --build predict
-# Put the dataset in ./data (images/, test_query.csv, test_gallery.csv); results appear in ./output.
+# Falcon ReID — one command for each use (answer #41):
+#
+#   Web service (backend + vector DB + browser client):
+#       docker compose up --build            ->  http://localhost:8080   (Swagger: /api/docs)
+#   Batch run that writes the three official files (what the organizers score):
+#       docker compose --profile batch run --rm predict
+#
+# Put the dataset in ./data (images/, test_query.csv, test_gallery.csv). Batch results go to ./output.
+# Nothing is downloaded at run time: api/db sit on an internal network without internet access and
+# predict has no network at all (answer #39); only the web container publishes a port to this computer.
+
 services:
+  db:
+    image: pgvector/pgvector:0.8.0-pg16
+    environment:
+      POSTGRES_USER: falcon
+      POSTGRES_PASSWORD: falcon
+      POSTGRES_DB: falcon
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U falcon -d falcon"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: { context: ., target: service }
+    image: falcon-reid-service:latest
+    environment:
+      DATABASE_URL: postgresql://falcon:falcon@db:5432/falcon
+      GALLERY_IMPORT_CSV: /data/test_gallery.csv       # demo gallery, loaded once into an empty DB
+      GALLERY_IMPORT_IMAGES: /data/images
+    volumes:
+      - ./data:/data:ro
+    networks: [backend]
+    depends_on:
+      db: { condition: service_healthy }
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
+  web:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./service/web:/usr/share/nginx/html:ro
+      - ./service/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+    networks: [backend, frontend]
+    depends_on: [api]
+
   predict:
-    build: .
+    profiles: [batch]
+    build: { context: ., target: infer }
     image: falcon-reid:latest
-    network_mode: none            # no internet at run time (answer #39)
+    network_mode: none
     volumes:
       - ./data:/data:ro
       - ./output:/out
     deploy:
       resources:
         reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+          devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+
+networks:
+  backend:
+    internal: true
+  frontend: {}
+
+volumes:
+  pgdata: {}

@@ -49,6 +49,27 @@ def load_infer_weights(path, device):
     return model.to(device).eval(), int(ckpt["input_size"])
 
 
+def open_image(image):
+    """File path, raw bytes or a PIL image -> PIL image (not decoded yet, so JPEG draft mode still works)."""
+    if isinstance(image, Image.Image):
+        return image
+    if isinstance(image, (bytes, bytearray)):
+        import io
+        return Image.open(io.BytesIO(image))
+    return Image.open(image)
+
+
+def crop_vehicle(img, bbox, long_side=384):
+    """Crop by bbox (x, y, w, h); if the longer side is > long_side, shrink it (bicubic, keep proportions).
+    Identical to make_crops.py, i.e. to what the models were trained on."""
+    x, y, w, h = bbox
+    car = img.convert("RGB").crop((round(x), round(y), round(x + w), round(y + h)))
+    scale = long_side / max(car.size)
+    if scale < 1:
+        car = car.resize((round(car.width * scale), round(car.height * scale)), Image.BICUBIC)
+    return car
+
+
 class Extractor:
     """Loads the models of one mode once, then extracts vectors.
 
@@ -78,17 +99,9 @@ class Extractor:
             torch.backends.cudnn.benchmark = True
 
     # ---------------- CPU part: read + decode + crop + resize ----------------
-    def _open(self, image):
-        if isinstance(image, Image.Image):
-            return image
-        if isinstance(image, (bytes, bytearray)):
-            import io
-            return Image.open(io.BytesIO(image))
-        return Image.open(image)
-
     def _prepare(self, image, bbox):
         """-> {input_size: uint8 array (size, size, 3)} for every input size the models need."""
-        img = self._open(image)
+        img = open_image(image)
         x, y, w, h = (float(v) for v in bbox)
         if self.decode == "pil-draft" and getattr(img, "format", None) == "JPEG":
             # JPEG can be decoded directly at 1/2, 1/4, 1/8 size; pick the biggest reduction that
@@ -100,11 +113,7 @@ class Extractor:
                     f = full_w / img.width
                     x, y, w, h = x / f, y / f, w / f, h / f
                     break
-        img = img.convert("RGB")
-        car = img.crop((round(x), round(y), round(x + w), round(y + h)))
-        scale = self.long_side / max(car.size)
-        if scale < 1:                                             # identical to make_crops.py
-            car = car.resize((round(car.width * scale), round(car.height * scale)), Image.BICUBIC)
+        car = crop_vehicle(img, (x, y, w, h), self.long_side)
         return {s: np.asarray(car.resize((s, s), Image.BILINEAR)) for s in self.sizes}
 
     # ---------------- GPU part: normalize + forward + L2 ----------------
