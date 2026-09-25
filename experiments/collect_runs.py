@@ -15,17 +15,25 @@ def main():
 
     rows = []
     for log in sorted(RUNS.glob("*/log.csv")):
-        df = pd.read_csv(log)
-        row = {"run": log.parent.name, "epochs_done": int(df.epoch.max()),
-               "time_min": round(pd.to_numeric(df.seconds, errors="coerce").sum() / 60)}
-        for col in ["mAP@10", "EMA_mAP@10"]:
-            s = pd.to_numeric(df.get(col), errors="coerce")
-            if s is not None and s.notna().any():
-                i = s.idxmax()
-                row[f"best {col}"] = round(float(s[i]), 4)
-                row[f"at epoch ({col})"] = int(df.epoch[i])
-                ev = df.loc[s.notna(), ["epoch"]].assign(v=s[s.notna()].round(4))
-                row[f"{col} by epoch"] = " ".join(f"{int(e)}:{v}" for e, v in zip(ev.epoch, ev.v))
+        try:
+            df = pd.read_csv(log)
+        except Exception as e:                       # unreadable/empty log: note it, keep going
+            rows.append({"run": log.parent.name, "note": f"unreadable: {e}"})
+            continue
+        row = {"run": log.parent.name, "columns": " ".join(df.columns) if "epoch" not in df.columns else ""}
+        if "epoch" in df.columns:
+            row["epochs_done"] = int(pd.to_numeric(df.epoch, errors="coerce").max())
+        if "seconds" in df.columns:
+            row["time_min"] = round(pd.to_numeric(df.seconds, errors="coerce").sum() / 60)
+        for col in [c for c in df.columns if "mAP" in c]:
+            s = pd.to_numeric(df[col], errors="coerce")
+            if not s.notna().any():
+                continue
+            i = s.idxmax()
+            ep = df.epoch if "epoch" in df.columns else pd.Series(range(1, len(df) + 1))
+            row[f"best {col}"] = round(float(s[i]), 4)
+            row[f"at epoch ({col})"] = int(ep[i])
+            row[f"{col} by epoch"] = " ".join(f"{int(e)}:{round(float(v), 4)}" for e, v in zip(ep[s.notna()], s[s.notna()]))
         rows.append(row)
     if rows:
         out.append("## Training runs (quick validation metric: cosine + flip, seed-42 split)\n")
@@ -33,7 +41,10 @@ def main():
 
     for csv in sorted(RUNS.glob("*.csv")):
         out.append(f"## {csv.name}\n")
-        out.append(pd.read_csv(csv).round(3).to_markdown(index=False) + "\n")
+        try:
+            out.append(pd.read_csv(csv).round(3).to_markdown(index=False) + "\n")
+        except Exception as e:
+            out.append(f"(unreadable: {e})\n")
 
     for csv in sorted(RUNS.glob("*/threshold_study.csv")) + sorted(RUNS.glob("*/*/threshold_study.csv")):
         out.append(f"## {csv.relative_to(RUNS)}\n")
