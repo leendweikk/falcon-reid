@@ -16,6 +16,7 @@ from reid import evaluate as official                 # the organizers' evaluate
 from reid.data import TrainSet, PKSampler, CROPS, make_transforms
 from reid.losses import ReIDLoss
 from reid.model import ReIDModel
+from reid.optim import param_groups
 
 ROOT = Path(__file__).resolve().parent
 
@@ -70,6 +71,13 @@ def main():
     ap.add_argument("--run-name", default=None)
     ap.add_argument("--size", type=int, default=256, help="square input size (256 = proven; 320 rejected)")
     ap.add_argument("--lr-backbone", type=float, default=LR_BACKBONE)
+    ap.add_argument("--epochs", type=int, default=EPOCHS, help="length of the LR schedule")
+    ap.add_argument("--stop-epoch", type=int, default=STOP_EPOCH)
+    ap.add_argument("--pool", choices=["avg", "gem"], default="avg", help="gem = generalized mean (ConvNeXt only)")
+    ap.add_argument("--P", type=int, default=16, help="cars per batch")
+    ap.add_argument("--K", type=int, default=4, help="photos per car")
+    ap.add_argument("--camera-aware", action="store_true", help="spread each car's K photos over cameras (answer #2)")
+    ap.add_argument("--llrd", type=float, default=1.0, help="layer-wise LR decay for ViT (e.g. 0.75); 1 = off")
     args = ap.parse_args()
     BACKBONE = BACKBONES[args.model]
     OUT = ROOT / "runs" / (args.run_name or f"val_{args.model}_ema")
@@ -81,21 +89,20 @@ def main():
     train_tf, test_tf = make_transforms(input_hw)
     ds = TrainSet(TRAIN_CSVS, transform=train_tf)
     print(f"training {BACKBONE} on {ds.num_classes} cars, {len(ds)} photos | input (h, w) = {input_hw} "
-          f"| backbone lr {args.lr_backbone:g}")
-    loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=16, K=4),
+          f"| backbone lr {args.lr_backbone:g} | llrd {args.llrd} | pool {args.pool} | P{args.P}xK{args.K} "
+          f"| camera-aware {args.camera_aware} | schedule {args.epochs}, stop {args.stop_epoch}")
+    loader = DataLoader(ds, batch_sampler=PKSampler(ds, P=args.P, K=args.K, camera_aware=args.camera_aware),
                         num_workers=4, pin_memory=True, persistent_workers=True)
 
-    model = ReIDModel(num_classes=ds.num_classes, backbone=BACKBONE, head=HEAD).cuda().train()
+    model = ReIDModel(num_classes=ds.num_classes, backbone=BACKBONE, head=HEAD, pool=args.pool).cuda().train()
     ema = AveragedModel(model, multi_avg_fn=get_ema_multi_avg_fn(EMA_DECAY), use_buffers=True)
     loss_fn = ReIDLoss(margin=TRIPLET_MARGIN, smoothing=0.1)
 
-    optimizer = torch.optim.AdamW([
-        {"params": model.backbone.parameters(), "lr": args.lr_backbone},
-        {"params": list(model.bnneck.parameters()) + list(model.classifier.parameters()), "lr": LR_HEAD},
-    ], weight_decay=WEIGHT_DECAY)
+    optimizer = torch.optim.AdamW(param_groups(model, args.lr_backbone, LR_HEAD, args.llrd),
+                                  weight_decay=WEIGHT_DECAY)
 
     steps_per_epoch = len(loader)
-    total_steps, warmup_steps = EPOCHS * steps_per_epoch, WARMUP_EPOCHS * steps_per_epoch
+    total_steps, warmup_steps = args.epochs * steps_per_epoch, WARMUP_EPOCHS * steps_per_epoch
 
     def lr_factor(step):                    # warmup, then cosine decay
         if step < warmup_steps:
@@ -116,7 +123,7 @@ def main():
     writer.writerow(["epoch", "loss", "id_loss", "tri_loss", "mAP@10", "Rank-1", "Rank-5",
                      "EMA_mAP@10", "EMA_Rank-1", "EMA_Rank-5", "seconds"])
 
-    for epoch in range(1, STOP_EPOCH + 1):
+    for epoch in range(1, args.stop_epoch + 1):
         start, sums = time.time(), np.zeros(3)
         for imgs, labels in loader:
             imgs, labels = imgs.cuda(non_blocking=True), labels.cuda(non_blocking=True)
@@ -137,7 +144,7 @@ def main():
         row = [epoch, *np.round(avg, 4), "", "", "", "", "", "", round(secs)]
         msg = f"epoch {epoch:2d} | loss {avg[0]:.3f} (id {avg[1]:.3f}, tri {avg[2]:.3f}) | {secs:.0f}s"
 
-        if epoch == 1 or epoch % EVAL_EVERY == 0 or epoch == STOP_EPOCH:
+        if epoch == 1 or epoch % EVAL_EVERY == 0 or epoch == args.stop_epoch:
             for kind, net, col in [("normal", model, 4), ("ema", ema.module, 7)]:
                 m = validate(net, q_ids, g_ids, gt_query, gt_gallery, test_tf)
                 row[col:col + 3] = [round(m["mAP@10"], 4), round(m["Rank-1"], 4), round(m["Rank-5"], 4)]

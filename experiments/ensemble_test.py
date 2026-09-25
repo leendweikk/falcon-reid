@@ -100,7 +100,7 @@ def main():
     ref = df.loc[df.combo == "base 0.6 + small 0.4", "mAP@10 (flip + re-rank)"].item()
     df["gain vs Base+Small"] = df["mAP@10 (flip + re-rank)"] - ref
     print("\n" + df.round(2).to_string(index=False))
-    out = ROOT / "runs" / f"ensemble_{Path(args.splits).name}.csv"
+    out = ROOT / "runs" / f"ensemble_{Path(args.splits).name}_{Path(args.vit).parent.name}.csv"
     df.to_csv(out, index=False)
     print(f"\nsaved -> {out}")
 

@@ -55,6 +55,8 @@ class TrainSet(Dataset):
         df = pd.concat([pd.read_csv(p, dtype={"image_id": str}) for p in csv_paths], ignore_index=True)
         self.car_to_label = {car: i for i, car in enumerate(sorted(df.vehicle_id.unique()))}
         self.items = [(r.image_id, self.car_to_label[r.vehicle_id]) for r in df.itertuples()]
+        # camera per photo: used ONLY to build batches (allowed, official answer #2), never as model input
+        self.cams = df.camera_id.tolist() if "camera_id" in df.columns else [0] * len(df)
         self.num_classes = len(self.car_to_label)
 
     def __len__(self):
@@ -67,13 +69,35 @@ class TrainSet(Dataset):
 
 
 class PKSampler(Sampler):
-    """Builds batches of P cars x K photos each."""
+    """Builds batches of P cars x K photos each.
+    camera_aware=True: the K photos of a car are spread over as many different cameras as possible
+    (camera_id is used only for sampling; allowed by the organizers, answer #2)."""
 
-    def __init__(self, dataset, P=16, K=4):
-        self.P, self.K = P, K
+    def __init__(self, dataset, P=16, K=4, camera_aware=False):
+        self.P, self.K, self.camera_aware = P, K, camera_aware
+        self.cams = dataset.cams
         self.by_label = defaultdict(list)
         for idx, (_, label) in enumerate(dataset.items):
             self.by_label[label].append(idx)
+
+    def _pick(self, idxs):
+        if not self.camera_aware:
+            return random.sample(idxs, self.K) if len(idxs) >= self.K else random.choices(idxs, k=self.K)
+        by_cam = defaultdict(list)
+        for i in idxs:
+            by_cam[self.cams[i]].append(i)
+        pools = list(by_cam.values())
+        random.shuffle(pools)
+        for pool in pools:
+            random.shuffle(pool)
+        picked = []
+        while len(picked) < self.K and any(pools):          # round-robin over cameras
+            for pool in pools:
+                if pool and len(picked) < self.K:
+                    picked.append(pool.pop())
+        if len(picked) < self.K:                               # car has fewer than K photos
+            picked += random.choices(idxs, k=self.K - len(picked))
+        return picked
 
     def __iter__(self):
         labels = list(self.by_label)
@@ -81,8 +105,7 @@ class PKSampler(Sampler):
         for start in range(0, len(labels) - self.P + 1, self.P):
             batch = []
             for label in labels[start:start + self.P]:
-                idxs = self.by_label[label]
-                batch += random.sample(idxs, self.K) if len(idxs) >= self.K else random.choices(idxs, k=self.K)
+                batch += self._pick(self.by_label[label])
             yield batch
 
     def __len__(self):
