@@ -208,7 +208,8 @@ Quick training metric by epoch (EMA): Base 256: 1:0.4077, 5:0.588, 10:0.7354, **
 | **320 input (trained)** | quick EMA ep15 0.7627 (bar 0.7624); real pipeline seed 42: 78.25 @320, 78.52 @352, 77.30 @288 vs 78.98 | **rejected** (worse with re-ranking, ~1.6× slower) |
 | **DINOv3 ViT-B** (lr 5e-5, EMA ep20) | quick: normal 5:0.6741 10:0.7306 15:0.7443 20:0.7537; EMA 5:0.4098 10:0.6757 15:0.7431 **20:0.7601** (still rising) | kept for testing |
 | ViT as fast model (no flip + re-rank) | **79.14** vs Base 78.98 | tie on accuracy; speed via official benchmark |
-| **Ensemble test** seed 42 (flip + re-rank) | Base 79.28 · ViT 80.37 · Base0.6+Small0.4 80.40 · **Base0.5+ViT0.5 82.94 (+2.54)** · Base0.6+ViT0.4 82.28 · Base0.4+Small0.3+ViT0.3 82.87 · Base0.5+Small0.25+ViT0.25 81.67 | passes on seed 42; **seed 7 pending (queue)** |
+| **Ensemble test** seed 42 (flip + re-rank) | Base 79.28 · ViT 80.37 · Base0.6+Small0.4 80.40 · **Base0.5+ViT0.5 82.94 (+2.54)** · Base0.6+ViT0.4 82.28 · Base0.4+Small0.3+ViT0.3 82.87 · Base0.5+Small0.25+ViT0.25 81.67 | passes on seed 42 |
+| **Ensemble test seed 7** (flip + re-rank) | Base 77.15 · ViT 77.28 · Base0.6+Small0.4 76.93 · **Base0.5+ViT0.5 81.29 (+4.36)** · Base0.6+ViT0.4 80.21 · Base0.4+Small0.3+ViT0.3 80.61 · Base0.5+Small0.25+ViT0.25 79.56 | **GATE PASSED on both splits → Base 0.5 + ViT 0.5 is the new accurate ensemble** (Small drops out) |
 | **Refusal study** (0.7·F1+0.3·TNR, 20% strangers) | seed 42: cosine@0.72 = 0.932, cosine re-tuned (0.78) 0.948, **cos+gap 0.957** (plateau 0.830–0.890); seed 7: cosine@0.72 0.942, cosine re-tuned 0.957, **cos+gap 0.962** (plateau 0.798–0.889); PR-AUC best for cos+gap on both | **adopted: cos+gap, threshold 0.86** for the current fast Base model |
 
 "gap" = top-1 cosine minus the best cosine among the OTHER gallery items (one query only). "cos+gap" = the sum.
@@ -225,9 +226,8 @@ identity); the Transporter matched grey vs black (colour ignored). Wrong matches
 
 `queue.ps1` (resumable: jobs whose log says finished are skipped; logs in `runs/queue_logs/<name>.txt`, UTF-16):
 1. `eval_vit_fast` ✅ (79.14)
-2. `vit_s7` — seed-7 ViT (train_final, lr 5e-5, stop 20) → `runs/split7_vit/vit.pth` (was training at 16:50)
-3. `eval_ens_s7` — ensemble test on seed 7 (Base/Small from runs/split7, ViT from split7_vit). **Gate for the ViT:**
-   the best ViT combo must beat Base+Small by ≥ 0.7 on seed 7 too, with the SAME fixed weights
+2. `vit_s7` ✅ seed-7 ViT → `runs/split7_vit/vit.pth` (finished 16:57)
+3. `eval_ens_s7` ✅ Base0.5+ViT0.5 = 81.29 vs Base+Small 76.93 (+4.36) → ViT gate passed on both splits
 4. `vit_e30` — ViT, full 30 epochs (seed 42)
 5. `vit_llrd` — ViT, lr 1e-4 + layer-wise decay 0.75, 30 epochs
 6. `base_cam` — Base + camera-aware batches (A3)
@@ -256,7 +256,7 @@ Outputs: `runs/multisize_splits_<run>.csv`, `runs/ensemble_<splits>_<vitdir>.csv
 ## 11. Master plan (nothing dropped; the gates decide)
 
 **A. Accuracy (45%)**
-A1 ViT ensemble ✅ seed 42, seed 7 in the queue · A2 ViT recipe (30 epochs, LLRD) in the queue · A3 camera-aware batches
+A1 ViT ensemble ✅ passed on both splits (+2.54 / +4.36); the final ViT on all data (train_final --model vit --lr-backbone 5e-5 --stop-epoch 20, or the better A2 recipe) is still TODO · A2 ViT recipe (30 epochs, LLRD) in the queue · A3 camera-aware batches
 in the queue · A4 GeM in the queue · A5 P=32 in the queue · A6 ConvNeXt-Large (1-epoch fit test in 6 GB first; ensemble
 member or teacher only) · A7 letterbox input (keep the aspect ratio, grey padding) · A8 label cleaning (flag suspicious training
 labels, check by eye) · A9 **VeRi / external data** (joint training; ~5× longer; list in README; check Grad-CAM for plate
@@ -292,7 +292,7 @@ update the threshold example (it says 0.60).
 
 **G. Presentation** PDF/PPTX per ТЗ §11; slides 7–11 in the strict template (Telegram 23.09); demo video.
 
-Suggested order: finish the queue → decide the ViT (seed 7) → official speed benchmark (C1) → D1/D2 early (risky) →
+Suggested order: finish the queue (ViT decided: kept) → official speed benchmark (C1) → D1/D2 early (risky) →
 A6–A11 → final retrains → freeze → pipeline + Docker → service → docs → presentation → clean-machine test →
 upload the links early.
 
