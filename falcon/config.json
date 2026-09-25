@@ -4,16 +4,44 @@
   "modes": {
     "fast": {
       "models": [
-        {"name": "base", "backbone": "convnext_base.dinov3_lvd1689m", "file": "weights/base_infer.pth", "weight": 1.0}
+        {
+          "name": "base",
+          "backbone": "convnext_base.dinov3_lvd1689m",
+          "file": "weights/base_infer.pth",
+          "weight": 1.0
+        }
       ],
       "flip": false,
       "refusal_threshold": 0.86,
       "_threshold_source": "experiments/threshold_study.py, cos+gap signal, plateau centre on seeds 42 and 7 (fast Base model)"
     },
+    "fast_vit": {
+      "models": [
+        {
+          "name": "vit",
+          "backbone": "vit_base_patch16_dinov3.lvd1689m",
+          "file": "weights/vit_infer.pth",
+          "weight": 1.0
+        }
+      ],
+      "flip": false,
+      "refusal_threshold": null,
+      "_threshold_source": "candidate fast model (ViT alone, no flip): threshold not tuned yet"
+    },
     "accurate": {
       "models": [
-        {"name": "base", "backbone": "convnext_base.dinov3_lvd1689m", "file": "weights/base_infer.pth", "weight": 0.5},
-        {"name": "vit", "backbone": "vit_base_patch16_dinov3.lvd1689m", "file": "weights/vit_infer.pth", "weight": 0.5}
+        {
+          "name": "base",
+          "backbone": "convnext_base.dinov3_lvd1689m",
+          "file": "weights/base_infer.pth",
+          "weight": 0.5
+        },
+        {
+          "name": "vit",
+          "backbone": "vit_base_patch16_dinov3.lvd1689m",
+          "file": "weights/vit_infer.pth",
+          "weight": 0.5
+        }
       ],
       "flip": true,
       "refusal_threshold": null,
@@ -22,7 +50,13 @@
   },
   "decode": "pil",
   "crop_long_side": 384,
-  "rerank": {"enabled": true, "k1": 6, "k2": 2, "lambda": 0.3, "topk": 100},
+  "rerank": {
+    "enabled": true,
+    "k1": 6,
+    "k2": 2,
+    "lambda": 0.3,
+    "topk": 100
+  },
   "batch_size": 32,
   "decode_workers": 8
 }

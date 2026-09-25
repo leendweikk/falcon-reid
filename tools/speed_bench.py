@@ -9,6 +9,7 @@ Points: latency <= 40 ms -> 10, 40-80 linear, > 80 -> 0; FPS >= 100 -> 10, 50-10
 
   python tools/speed_bench.py --mode fast --images data/images --csv data/test_query.csv data/test_gallery.csv
   python tools/speed_bench.py --mode accurate --decode pil-draft
+  python tools/speed_bench.py --config falcon/config_val42.json --mode fast_vit
 Run it only when the GPU is otherwise idle. Results are appended to docs/speed_log_falcon.csv.
 """
 import argparse
@@ -44,6 +45,7 @@ def points_fps(fps):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--config", default=None, help="default: falcon/config.json")
     ap.add_argument("--mode", default=None)
     ap.add_argument("--decode", default=None)
     ap.add_argument("--images", default=str(ROOT / "data" / "images"))
@@ -54,7 +56,7 @@ def main():
     ap.add_argument("--runs", type=int, default=300)
     args = ap.parse_args()
 
-    cfg = load_config()
+    cfg = load_config(args.config)
     mode = args.mode or cfg["mode"]
     t0 = time.perf_counter()
     ex = Extractor(cfg, mode=mode, decode=args.decode)
