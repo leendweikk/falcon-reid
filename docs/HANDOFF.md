@@ -228,11 +228,11 @@ identity); the Transporter matched grey vs black (colour ignored). Wrong matches
 1. `eval_vit_fast` ✅ (79.14)
 2. `vit_s7` ✅ seed-7 ViT → `runs/split7_vit/vit.pth` (finished 16:57)
 3. `eval_ens_s7` ✅ Base0.5+ViT0.5 = 81.29 vs Base+Small 76.93 (+4.36) → ViT gate passed on both splits
-4. `vit_e30` — ViT, full 30 epochs (seed 42)
-5. `vit_llrd` — ViT, lr 1e-4 + layer-wise decay 0.75, 30 epochs
-6. `base_cam` — Base + camera-aware batches (A3)
-7. `base_gem` — Base + GeM (A4; uncertain on ConvNeXt because its features can be negative)
-8. `base_p32` — Base, 32 cars per batch (A5)
+4. `vit_e30` ✅ ViT, full 30 epochs (seed 42): quick EMA 0.7686 at ep30 (vs 0.7601 for the ViT EMA at ep20); real-pipeline check = `eval_vit_e30` / `eval_ens_e30`
+5. `vit_llrd` ✅ ViT, lr 1e-4 + layer-wise decay 0.75, 30 epochs: quick EMA 0.7586 (not better than vit_e30)
+6. `base_cam` ✅ Base + camera-aware batches (A3): quick EMA 0.7463 (worse than 0.7554)
+7. `base_gem` ✅ Base + GeM (A4): quick EMA 0.7516 at ep15, 0.7383 at ep20 (not better)
+8. `base_p32` ⛔ stopped: batch 128 does not fit in 6 GB (5.7/6.0 GB dedicated + 2.6 GB shared memory; 493–1116 s/epoch vs 88 s). Log kept as runs/queue_logs/base_p32_stopped.txt
 9–15. real-pipeline evals: `eval_base_cam/gem/p32` (multisize_test --sizes 256; compare with 78.98),
    `eval_vit_e30/llrd` (compare with 79.14), `eval_ens_e30/llrd` (compare with 82.94)
 Outputs: `runs/multisize_splits_<run>.csv`, `runs/ensemble_<splits>_<vitdir>.csv`.

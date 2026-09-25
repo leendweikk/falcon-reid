@@ -1,0 +1,14 @@
+.git
+.venv
+data
+runs
+external
+submission
+docs
+experiments
+**/__pycache__
+*.patch
+weights/*.part
+weights/base.pth
+weights/small.pth
+weights/vit.pth

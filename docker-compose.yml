@@ -1,0 +1,17 @@
+# One command (answer #41):  docker compose up --build predict
+# Put the dataset in ./data (images/, test_query.csv, test_gallery.csv); results appear in ./output.
+services:
+  predict:
+    build: .
+    image: falcon-reid:latest
+    network_mode: none            # no internet at run time (answer #39)
+    volumes:
+      - ./data:/data:ro
+      - ./output:/out
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

@@ -1,0 +1,8 @@
+{
+  "_comment": "Inference weights (fp16, no classifier head) made by tools/export_weights.py. Hosted as assets of the GitHub release below; tools/fetch_weights.py downloads missing files and checks sha256 (answer #39).",
+  "release": "https://github.com/leendweikk/falcon-reid/releases/tag/weights-v1",
+  "files": [
+    {"name": "base_infer.pth", "url": "https://github.com/leendweikk/falcon-reid/releases/download/weights-v1/base_infer.pth", "sha256": "TO_BE_FILLED", "bytes": 0},
+    {"name": "vit_infer.pth",  "url": "https://github.com/leendweikk/falcon-reid/releases/download/weights-v1/vit_infer.pth",  "sha256": "TO_BE_FILLED", "bytes": 0}
+  ]
+}
