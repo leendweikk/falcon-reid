@@ -52,13 +52,22 @@ Each grid shows the query, its top-5 and the best true match. Files: `docs/error
 ![worst 2](error_analysis/worst_02.jpg)
 ![worst 3](error_analysis/worst_03.jpg)
 
-Patterns found when we reviewed the worst cases (first on the earlier fast model; to be re-checked on these grids):
-- **Lookalikes:** same model and colour; the true match is ranked lower because it is seen from the other end
-  (front vs rear) or in different light.
-- **Front ↔ rear:** the hardest geometry — few shared visible parts.
-- **Night and glare:** headlights and reflections hide the body details the model relies on.
-- **Label issues in the data:** a few grids look like two different cars sharing one ID, or two cars inside one
-  box; we did not remove them from training (not quantified, so not claimed as a number).
+What we see in the 20 worst queries (checked by eye; several rows are different photos of the same query car,
+so the counts are approximate and only describe these 20):
+- **Two cars inside one box (≈ 5 of 20).** The box covers the target car *and* another car in front of or behind
+  it (for example a white-and-orange car-sharing SUV parked next to a dark sedan). The model then describes the
+  more visible car, and the "true" gallery photo shows the other one. This is an annotation ambiguity, not
+  something a better embedding can fully fix.
+- **Front ↔ rear (≈ 5 of 20).** Query from behind, true match from the front (or the reverse): very few shared
+  visible parts. The top-5 are then lookalikes seen from the same side as the query.
+- **Night, headlights and brake lights (≈ 3 of 20).** Glare hides the body details the model relies on — the
+  same weakness as the brightness table above.
+- **Fleet lookalikes.** Car-sharing and taxi fleets use identical cars with identical liveries; for these queries
+  the top-5 is full of the same model in the same colours. Without the plate, some of these pairs are close to
+  indistinguishable — worth saying openly to an operator.
+- **Probable label problems (≈ 4 of 20).** In a few grids the "true" photo shows a clearly different vehicle
+  (for example a sedan whose true match is a black minivan). We did not remove such pairs (training or
+  validation) and do not claim a percentage.
 
 ## What the model looks at (Grad-CAM)
 

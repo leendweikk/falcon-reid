@@ -261,6 +261,8 @@ On split 42 (final pipeline, 932 scored queries): the correct car is missing fro
 In **91% of failures a different car looks more similar than the best true match** — the lookalike problem
 (same make, model and colour). Accuracy by condition (mAP@10): darkest quarter of photos **0.764** vs brightest
 **0.860**; medium-sized boxes are harder than very small or very large ones (0.80 vs 0.83–0.85).
+In the 20 worst cases we see boxes that contain **two cars**, **front ↔ rear** views, **night glare**, identical
+**car-sharing/taxi fleet** cars and a few probable label errors.
 Details, tables and picture grids of the worst cases: [`docs/ERROR_ANALYSIS.md`](docs/ERROR_ANALYSIS.md).
 
 ## Limitations and next steps

@@ -22,7 +22,7 @@ The model is chosen by **total points**, from measured numbers only.
 | A5 | P=32 batches | ❌ | doesn't fit in 6 GB (shared-memory spill, 5–12× slower) |
 | A6 | ConvNeXt-Large (as a teacher only) | ⬜ low | 1-epoch fit test first; only if distillation works and time remains |
 | A7 | Letterbox input | ❌ | rectangular input already lost; low expected gain; no GPU time |
-| A8 | **Label cleaning** (train only) | ⬜ | ~45% of the worst failures look like label errors. Manual review (Leen, no GPU). Also good for the defense |
+| A8 | Label cleaning (train only) | ❌ | not done (no time before the freeze); the probable label problems are shown honestly in docs/ERROR_ANALYSIS.md instead of a claimed percentage |
 | A9 | **VeRi + plate blurring** | ❌ | 26 Sep, real pipeline, seed 42: two-stage top-100 **82.02 vs 82.25 (−0.23)**; fast ViT in the same test 79.07 vs 79.36 (−0.29); fast mode via multisize_test s42 79.39 vs 79.14 (+0.25), s7 78.08 vs 78.00 (+0.08). Fails the +0.7 bar on seed 42 → seed-7 two-stage run not needed. **Rejected: VeRi does not help our cars.** Final ViT stays (defense line: tried 49k extra photos, measured, rejected) |
 | A10 | **Two-stage** (fast ViT top-100 → ensemble re-orders) | ✅ | **passes the gate**: s42 82.25 vs 79.36 (+2.89), s7 80.29 vs 78.15 (+2.15). Full ensemble 82.85/80.86. In falcon/ as mode `two_stage` (patch21). Allowed #28, not timed #31 |
 | A11 | Distillation ensemble → ViT (relational KD) | ❌ | fast mode s42 79.53 vs 79.14 (+0.39), s7 78.03 vs 78.00 (+0.03): below the +0.7 bar |
@@ -69,7 +69,7 @@ The model is chosen by **total points**, from measured numbers only.
 |---|---|---|---|
 | E1 | **README.md** (English + Russian summary) | ✅ draft | patch35 (26 Sep): results on both splits, one-command runs, architecture diagrams, method, validation protocol, refusal justification, speed, plate test, errors, limitations, training reproduction, all external resources with versions/revisions. Review once more after Phase 4 |
 | E2 | EXPERIMENTS.md (all experiments incl. rejected) | ✅ | docs/EXPERIMENTS.md (patch35) |
-| E3 | Error analysis write-up with real examples | 🔄 | docs/ERROR_ANALYSIS.md from the FINAL pipeline (split 42: 56 failures = 6.0%, 91% lookalikes, dark Q1 0.764 vs 0.860); new grids to be copied into docs/error_analysis and checked by eye |
+| E3 | Error analysis write-up with real examples | ✅ | docs/ERROR_ANALYSIS.md from the FINAL pipeline + its 20 grids (commit de83627), patterns checked by eye 26 Sep: two cars in one box (~5/20), front↔rear (~5), night glare (~3), fleet lookalikes, probable label problems (~4) |
 | E4 | Grad-CAM images | ✅ | docs/gradcam (10 images) |
 | E5 | Limitations section | ✅ | in README |
 | E6 | Research sources list (Leen's docx + ours) | ⬜ | goes into the README references |
@@ -123,9 +123,9 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I11 | README lists ALL libraries/frameworks/datasets WITH versions; datasets = organizers' only (VeRi tried, rejected, not used); plate detector listed as analysis-only tool | ТЗ §7, §12; #46 | ✅ | part of E1 |
 | I12 | README language: English + a short Russian summary at the top (recommended) | judges are Russian | ✅ | Leen decides |
 | I13 | Threshold justification in README (plateau on 2 splits, 20% open-set re-weighting, 0.7·F1+0.3·TNR) | README dataset, #26, ТЗ §12 | ✅ | = B5 |
-| I14 | Error analysis on the held-out val split with real examples; back the "label errors" claim with example pairs (or drop the %) | ТЗ §9–§11, #50 | ⬜ | = E3 + A8 (time-boxed) |
-| I15 | Remove HANDOFF.md (personal/informal) from the public repo before submission; PLAN.md → keep as dev log or move out | public repo | ⬜ | before links go up |
-| I16 | Quarantine/remove forbidden reference code: experiments/posthoc.py "ALL QUERIES [FORBIDDEN]" re-rank | #40 (source code is checked) | ⬜ | cleanup (H3) |
+| I14 | Error analysis on the held-out val split with real examples; back the "label errors" claim with example pairs (or drop the %) | ТЗ §9–§11, #50 | ✅ | = E3 + A8 (time-boxed) |
+| I15 | Remove HANDOFF.md (personal/informal) from the public repo before submission; PLAN.md → keep as dev log or move out | public repo | ✅ | before links go up |
+| I16 | Quarantine/remove forbidden reference code: experiments/posthoc.py "ALL QUERIES [FORBIDDEN]" re-rank | #40 (source code is checked) | ✅ | cleanup (H3) |
 | I17 | Commit docs/speed_log_falcon.csv (speed evidence); delete stray root data.py (check unused) + old .patch files | H3 | ⬜ | |
 | I18 | Hosted prototype: password-protected (do not publish organizers' images openly); online through the expert review (30 Sep–14 Oct) and the finals; CPU host is enough (~1.3 s/query two-stage) | ТЗ §13 | ⬜ | = F4 |
 | I19 | Presentation content check: no "~90% ceiling" framing; include VeRi rejection, plate test, model-choice-by-points table, honest errors | ТЗ §11 | ⬜ | teammate + Leen |
