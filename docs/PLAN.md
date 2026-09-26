@@ -29,7 +29,7 @@ The model is chosen by **total points**, from measured numbers only.
 | A12 | Re-tune re-ranking k1/k2/λ/top-K | ❌ | best grid point (k1=4,k2=2,λ=0.5): s42 +0.90 but s7 −0.12 → fails the gate; defaults k1=6,k2=2,λ=0.3 stay |
 | A13 | Gallery-side smoothing | ⬜ low | allowed #38; only if time |
 | A14 | Synthetic data (VehicleX) | ❌ | no time |
-| A15 | Plate-masking self-test (paint the plate area, check the mAP drop) | ⬜ ⚠️ | now REQUIRED for the VeRi decision (A9): compare the drop of the current ViT vs the VeRi ViT; also evidence for #48 in the defense |
+| A15 | Plate-masking self-test (paint the plate area, check the mAP drop) | 🔄 | experiments/plate_mask_test.py (patch26, tested on fake data): `prepare` on CPU (paints plates gray in the val crops of both splits) → `eval` after training. **VeRi rule: with plates painted, the VeRi ViT must still beat the current ViT on both splits.** Also evidence for #48 in the defense |
 
 ## B. Refusal (10%)
 | # | Item | Status | Notes |
