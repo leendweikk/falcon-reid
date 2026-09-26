@@ -74,5 +74,5 @@
     "topk": 100
   },
   "batch_size": 32,
-  "decode_workers": 8
+  "decode_workers": "auto"
 }

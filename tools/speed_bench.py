@@ -94,7 +94,8 @@ def main():
                      if p.suffix in WEIGHT_EXT and any(p.name == Path(m["file"]).name
                                                         for m in cfg["modes"][mode]["models"])) / 2**20
     best = max(fps, key=fps.get)
-    row = {"mode": mode, "decode": ex.decode, "gpu": torch.cuda.get_device_name(0) if dev.type == "cuda" else "cpu",
+    row = {"mode": mode, "decode": ex.decode, "decode_workers": ex.decode_workers, "cpu_threads": __import__("os").cpu_count(),
+           "gpu": torch.cuda.get_device_name(0) if dev.type == "cuda" else "cpu",
            "torch": torch.__version__, "latency_b1_ms": round(lat_ms, 2),
            **{f"fps_b{k}": round(v, 1) for k, v in fps.items()}, "best_fps": round(fps[best], 1),
            "peak_vram_mb": round(torch.cuda.max_memory_allocated() / 2**20) if dev.type == "cuda" else 0,

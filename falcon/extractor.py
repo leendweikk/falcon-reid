@@ -12,6 +12,7 @@ Preprocessing is identical to what the models were trained and validated on
 Each image is processed on its own: no information from other images is used (answer #38).
 """
 import json
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -93,8 +94,13 @@ class Extractor:
         self.sizes = sorted({s for _, s, _ in self.models})
         self.mean = torch.tensor(MEAN, device=self.device).view(1, 3, 1, 1)
         self.std = torch.tensor(STD, device=self.device).view(1, 3, 1, 1)
-        workers = int(self.cfg.get("decode_workers", 8))
+        # CPU decoding (read + JPEG decode + crop + resize) is the throughput bottleneck, not the GPU
+        # (Colab T4 with 2 CPU threads: 47 FPS whatever the GPU). "auto" = one worker per CPU thread,
+        # capped at 16, so a many-core test machine (the judges': 128 threads) decodes in parallel.
+        w = self.cfg.get("decode_workers", 8)
+        workers = min(16, os.cpu_count() or 1) if w == "auto" else int(w)
         self.pool = ThreadPoolExecutor(workers) if workers > 1 else None
+        self.decode_workers = workers
         if self.device.type == "cuda":
             torch.backends.cudnn.benchmark = True
 
