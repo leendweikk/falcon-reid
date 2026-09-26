@@ -14,3 +14,4 @@ weights/*
 !weights/manifest.json
 !weights/base_infer.pth
 !weights/vit_infer.pth
+!weights/LICENSE_DINOv3.md

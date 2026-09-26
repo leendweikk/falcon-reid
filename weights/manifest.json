@@ -14,5 +14,6 @@
       "sha256": "ca781eacac1f6c39ae358378d3ab118d36b156c451f178c60f7e1038aa6506ed",
       "bytes": 171340555
     }
-  ]
+  ],
+  "license": "The weights are fine-tuned from Meta's DINOv3 (timm vit_base_patch16_dinov3.lvd1689m, convnext_base.dinov3_lvd1689m) and are distributed under the DINOv3 License: see weights/LICENSE_DINOv3.md (copied verbatim from https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md, version 'Last Updated: August 19, 2025')."
 }

@@ -113,7 +113,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I1 | **Final ViT exported to weights/vit_infer.pth** | D3, #39 | ✅ | was MISSING until 26 Sep 16:12 (config pointed at a file that did not exist). sha256 ca781eacac1f6c39ae358378d3ab118d36b156c451f178c60f7e1038aa6506ed |
 | I2 | Full final pipeline run on the public test (two-stage default) → time vs limit, answered count | D5, D9, #40 | 🔄 | `python -m falcon.predict ... --out runs/final_public`; then copy the 3 files to submission/ |
 | I3 | .dockerignore whitelists ONLY manifest + the 2 inference files | #37 (all weight files in the solution dir count, cap 2 GB) | ✅ | patch30; before, a local build copied ~1.8 GB of training/validation weights into the image |
-| I4 | GitHub Release weights-v1 (base_infer + vit_infer) + real sha256/bytes in manifest (`fetch_weights.py --update`) | #39, ТЗ §9 reproducibility | ⬜ ⚠️ | without it a build from a fresh clone FAILS = disqualification risk |
+| I4 | GitHub Release weights-v1 (base_infer + vit_infer + LICENSE_DINOv3.md) + real sha256/bytes in manifest | #39, ТЗ §9 reproducibility | 🔄 | manifest filled 26 Sep (base 1e012b9e…, vit ca781eac…); DINOv3 licence allows redistribution if a copy of the licence goes with the weights (§1(b)(i)) → weights/LICENSE_DINOv3.md added (patch31); release upload next |
 | I5 | torch 2.14.0+cu126 wheel exists for cp311 linux | D2 | ✅ | checked on download.pytorch.org 26 Sep |
 | I6 | Real Docker build from a fresh clone + offline run (`--network none`) + outputs pass evaluate.py format + no OOM | ТЗ §6–§8, #39–#41 | ⬜ ⚠️ | after I4 |
 | I7 | A5000 speed + driver 12.2 + determinism (two runs identical) | #30–#34, #31 determinism | ⬜ | rental (C7) |
