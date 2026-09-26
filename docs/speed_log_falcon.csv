@@ -5,3 +5,4 @@ laptop,accurate,pil,8,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,85.1,11
 Google Colab (free),fast_vit,pil,8,2,Tesla T4,2.14.0+cu126,36.61,25.1,39.3,45.7,47.2,47.2,726,163,2.33,0.0,10.0,0.0
 Google Colab (free),fast_vit,pil-draft,8,2,Tesla T4,2.14.0+cu126,32.29,29.7,42.2,46.0,48.8,48.8,726,163,2.33,0.0,10.0,0.0
 laptop,fast_vit,pil,12,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,27.22,33.5,128.3,135.2,126.7,135.2,726,163,3.31,0.0,10.0,10.0
+3d6b397609e6,fast_vit,pil,12,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu126,37.54,23.0,101.8,104.7,102.3,104.7,726,163,2.25,0.0,10.0,10.0
