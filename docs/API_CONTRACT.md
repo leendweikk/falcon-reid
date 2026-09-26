@@ -9,8 +9,8 @@ Input is always a full frame **plus the vehicle bbox**, and the service does no 
 
 ## GET /api/health
 ```json
-{ "status": "ok", "mode": "fast", "models": ["vit"], "embedding_dim": 768,
-  "device": "cuda", "threshold": 0.86, "gallery_size": 750 }
+{ "status": "ok", "mode": "two_stage", "models": ["vit"], "rescore_models": ["base", "vit"],
+  "embedding_dim": 768, "device": "cuda", "threshold": 0.809, "gallery_size": 750 }
 ```
 
 ## POST /api/search — find the same vehicle (or refuse)
@@ -27,22 +27,24 @@ Input is always a full frame **plus the vehicle bbox**, and the service does no 
   "search_id": "3f1c…",
   "refused": false,
   "confidence": 0.9907,
-  "threshold": 0.86,
+  "threshold": 0.809,
   "top_match": "df7ea501…",
   "results": [
     { "rank": 1, "gallery_id": "df7ea501…", "similarity": 0.977,
       "camera": null, "label": null, "image_url": "/api/gallery/df7ea501…/image" }
   ],
-  "extract_ms": 33.8, "search_ms": 8.7, "gallery_size": 750
+  "extract_ms": 27.2, "rescore_ms": 60.1, "search_ms": 12.4, "gallery_size": 750
 }
 ```
 - `refused = true` when `confidence < threshold`. Then `top_match` is `null`, and the UI must show
   "no confident match in the gallery". The candidates are still returned so the operator can look at
   them, but they must be shown as NOT accepted.
-- `confidence` is the cos+gap score (same rule as `candidates.csv`); `similarity` is the plain cosine
-  of each candidate.
-- The ranking is the same as the batch run: cosine top-100, then k-reciprocal re-ranking of that query
-  alone, never using other queries (answer #38).
+- `confidence` is the cos+gap score (same rule as `candidates.csv`); `similarity` is the cosine of the
+  vectors used for the final order (the stage-2 ensemble vectors in two-stage mode).
+- The ranking is the same as the batch run (shared code `falcon.search.order_candidates`): fast-ViT cosine
+  top-100, the Base+ViT ensemble re-orders only those, then k-reciprocal re-ranking of that query alone,
+  never using other queries (answers #28, #38). `extract_ms` = stage 1 (the timed feature),
+  `rescore_ms` = stage-2 features, `search_ms` = search + re-ranking.
 
 ## POST /api/gallery — add a known vehicle
 `multipart/form-data`: `file`, `x`, `y`, `w`, `h` (required), plus `gallery_id` (optional, default random),

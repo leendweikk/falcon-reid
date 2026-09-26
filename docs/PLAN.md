@@ -67,11 +67,11 @@ The model is chosen by **total points**, from measured numbers only.
 ## E. Docs
 | # | Item | Status | Notes |
 |---|---|---|---|
-| E1 | **README.md (Russian + English summary)** | ⬜ ⚠️ | architecture, methods, one-command run, val metrics on both splits, threshold reasoning, all libraries/datasets with versions (ТЗ §12) |
-| E2 | EXPERIMENTS.md (all experiments incl. rejected) | ⬜ | |
-| E3 | Error analysis write-up with real examples | ⬜ | docs/error_analysis exists |
+| E1 | **README.md** (English + Russian summary) | ✅ draft | patch35 (26 Sep): results on both splits, one-command runs, architecture diagrams, method, validation protocol, refusal justification, speed, plate test, errors, limitations, training reproduction, all external resources with versions/revisions. Review once more after Phase 4 |
+| E2 | EXPERIMENTS.md (all experiments incl. rejected) | ✅ | docs/EXPERIMENTS.md (patch35) |
+| E3 | Error analysis write-up with real examples | 🔄 | docs/ERROR_ANALYSIS.md from the FINAL pipeline (split 42: 56 failures = 6.0%, 91% lookalikes, dark Q1 0.764 vs 0.860); new grids to be copied into docs/error_analysis and checked by eye |
 | E4 | Grad-CAM images | ✅ | docs/gradcam (10 images) |
-| E5 | Limitations section | ⬜ | |
+| E5 | Limitations section | ✅ | in README |
 | E6 | Research sources list (Leen's docx + ours) | ⬜ | goes into the README references |
 
 ## F. Service — OPTIONAL (answers #41, #43, #44: tie-breaker only, NOT in the main 90%; engineering 15% = inference pipeline, Docker, docs)
@@ -118,11 +118,11 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I6 | Real Docker build from a fresh clone + offline run (`--network none`) + no OOM | ТЗ §6–§8, #39–#41 | ✅ | 26 Sep laptop (Docker Desktop, RTX 4050): build 657 s, all checks pass; offline GPU run TOTAL 98.1 s, answered 991/1110. vs laptop run: top-1 identical 100%, full top-10 rows identical 98.6% (the rest = near-ties swapped by fp16 math of a different CUDA build), embeddings min cosine 0.999999, same answered set → reproduced. Say this in the README |
 | I7 | Speed + determinism on more than one machine | #30–#34, #31 | ✅ | **Colab T4 (2 CPU threads, driver 580, torch cu126, released weights): 36.6 ms → 10/10 latency; 47 FPS = CPU-decode bound; determinism 0.0.** Laptop after patch33 (12 decode workers): **27.2 ms, 135 FPS → 20/20; determinism 0.0**. Full run 86.5 s vs limit ≈ 27.2 × 1860 × 3 ≈ 152 s (57%). Not measured (no budget): the exact A5000 + driver 12.2 and the judges' CPU-thread limit → README explains that FPS grows with CPU threads. All rows in docs/speed_log_falcon.csv |
 | I8 | Live build demo on request | ТЗ §6 «продемонстрировать процесс сборки … в реальном времени» | ⬜ | rehearse once; note build time |
-| I9 | DINOv3 pretrained weights: exact source (timm/HF id + revision) and licence notice for our released fine-tuned weights | #39, #46 | ⬜ | README + release notes |
-| I10 | README states: embeddings.npy = stage-1 ViT vectors, submission.csv = two-stage order (why they differ) + re-ranking described | #12, #28 | ⬜ | part of E1 |
-| I11 | README lists ALL libraries/frameworks/datasets WITH versions; datasets = organizers' only (VeRi tried, rejected, not used); plate detector listed as analysis-only tool | ТЗ §7, §12; #46 | ⬜ | part of E1 |
-| I12 | README language: English + a short Russian summary at the top (recommended) | judges are Russian | ⬜ | Leen decides |
-| I13 | Threshold justification in README (plateau on 2 splits, 20% open-set re-weighting, 0.7·F1+0.3·TNR) | README dataset, #26, ТЗ §12 | ⬜ | = B5 |
+| I9 | DINOv3 pretrained weights: exact source (timm/HF id + revision) and licence notice for our released fine-tuned weights | #39, #46 | ✅ | README + release notes |
+| I10 | README states: embeddings.npy = stage-1 ViT vectors, submission.csv = two-stage order (why they differ) + re-ranking described | #12, #28 | ✅ | part of E1 |
+| I11 | README lists ALL libraries/frameworks/datasets WITH versions; datasets = organizers' only (VeRi tried, rejected, not used); plate detector listed as analysis-only tool | ТЗ §7, §12; #46 | ✅ | part of E1 |
+| I12 | README language: English + a short Russian summary at the top (recommended) | judges are Russian | ✅ | Leen decides |
+| I13 | Threshold justification in README (plateau on 2 splits, 20% open-set re-weighting, 0.7·F1+0.3·TNR) | README dataset, #26, ТЗ §12 | ✅ | = B5 |
 | I14 | Error analysis on the held-out val split with real examples; back the "label errors" claim with example pairs (or drop the %) | ТЗ §9–§11, #50 | ⬜ | = E3 + A8 (time-boxed) |
 | I15 | Remove HANDOFF.md (personal/informal) from the public repo before submission; PLAN.md → keep as dev log or move out | public repo | ⬜ | before links go up |
 | I16 | Quarantine/remove forbidden reference code: experiments/posthoc.py "ALL QUERIES [FORBIDDEN]" re-rank | #40 (source code is checked) | ⬜ | cleanup (H3) |
@@ -131,7 +131,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I19 | Presentation content check: no "~90% ceiling" framing; include VeRi rejection, plate test, model-choice-by-points table, honest errors | ТЗ §11 | ⬜ | teammate + Leen |
 | I20 | Submission links (repo, presentation PDF, prototype, docs) uploaded Monday evening; each opened logged-out to check | ТЗ §13, Telegram | ⬜ | |
 | I21 | Refresh RULES_CHECKLIST.md statuses and walk it line by line before upload | own rule | ⬜ | last step before upload |
-| I22 | Rejected ideas documented with reasons (distillation, torch.compile, TensorRT, INT8, letterbox, ConvNeXt-L, VeRi, 320, re-rank tuning, GeM, camera-aware, soup, CosFace) | defense, reviews | ⬜ | = E2 |
+| I22 | Rejected ideas documented with reasons (distillation, torch.compile, TensorRT, INT8, letterbox, ConvNeXt-L, VeRi, 320, re-rank tuning, GeM, camera-aware, soup, CosFace) | defense, reviews | ✅ | = E2 |
 | C7 | Rented GPU: speed test + bigger-batch ViT | ❌ | dropped 26 Sep: no budget; bigger batch also not worth reopening the verified release for < 1 mAP (one untuned try) |
 
 ## Order from 26 Sep 16:15 (one step at a time; tick items above as they finish)
