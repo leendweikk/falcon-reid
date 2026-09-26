@@ -2,6 +2,9 @@
 Compares two pipeline outputs on the same test: how often do they pick the same top-1 / overlap in top-10?
   python sanity_check.py <pred_dir_A> <pred_dir_B>
 """
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
 import sys
 from pathlib import Path
 

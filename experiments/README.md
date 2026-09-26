@@ -8,3 +8,8 @@ run by the Dockerfile. Every inference-time comparison here processes each query
 Main ones: `stage_tests.py` (two-stage search), `ensemble_test.py`, `multisize_test.py`,
 `threshold_study.py` (refusal signals), `plate_mask_test.py` (plate-masking self-test, answer #48),
 `prepare_veri.py` (VeRi preparation — the VeRi experiment was rejected), `official_bench.py` (speed).
+
+- `legacy/` — superseded tools from the Base + Small era (the old `run_inference.py` pipeline, the old benchmark,
+  model soup, old threshold scripts). **The submission's only entry point is `python -m falcon.predict`.**
+- `queues/` — PowerShell queues that ran the validation experiments overnight on the Windows laptop
+  (run from the project root: `powershell -ExecutionPolicy Bypass -File experiments/queues/queue.ps1`).

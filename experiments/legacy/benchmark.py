@@ -9,6 +9,9 @@ for several pipeline options, on GPU (if present) and CPU.
   python benchmark.py --no-cpu        # GPU only (CPU is slow to measure)
 Results -> docs/benchmark.md
 """
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
 import argparse
 import time
 from pathlib import Path
@@ -22,7 +25,7 @@ from reid.data import test_transform
 from reid.model import ReIDModel
 from reid.rerank import re_ranking_streaming
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 LONG_SIDE = 384
 
 
@@ -125,7 +128,7 @@ def main():
     print(f"re-ranking (top-100, gallery {len(g)}): {rerank_ms:.1f} ms per query")
 
     df = pd.DataFrame(results)
-    out = ROOT / "docs" / "benchmark.md"
+    out = ROOT / "experiments" / "legacy" / "benchmark_old.md"
     out.parent.mkdir(exist_ok=True)
     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none"
     out.write_text(

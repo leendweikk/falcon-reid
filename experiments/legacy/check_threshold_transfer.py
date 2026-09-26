@@ -2,13 +2,16 @@
 Compares top-1 confidence distributions: validation (matched queries only) vs real test.
   python check_threshold_transfer.py <val_pred_dir> <test_pred_dir> <val_threshold>
 """
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 
 SPLITS = (ROOT / "data" / "splits")
 val_dir, test_dir, val_thr = Path(sys.argv[1]), Path(sys.argv[2]), float(sys.argv[3])

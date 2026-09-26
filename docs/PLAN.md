@@ -99,7 +99,7 @@ The model is chosen by **total points**, from measured numbers only.
 |---|---|---|---|
 | H1 | Teammate: presentation in her own Claude chat (English content; template slides 7–11 keep their Russian labels), diagrams, UI screenshots, Monday clean-machine test | 🔄 | brief + prompt sent 26 Sep; all technical claims come from Leen/this chat; numbers = XX until the freeze |
 | H2 | Organizer questions: upload contents, prototype online duration | 🔄 | sent 26 Sep; moderator passed them to the mentor |
-| H3 | Repo cleanup: loose scripts into folders, old .patch files, stray data.py, queue scripts | ⬜ | |
+| H3 | Repo cleanup | ✅ | 26 Sep: local patches + stray data.py deleted; HANDOFF.md and experiments/posthoc.py removed (patch36); old entry points (run_inference.py, benchmark.py, soup.py, old threshold scripts) → experiments/legacy/, queues → experiments/queues/, old docs/benchmark.md → experiments/legacy/benchmark_old.md (patch37). Root now holds only the submission, training and analysis entry points |
 | H4 | Back up the new weights (Drive) | ⬜ | after the final models exist |
 | H5a | Deep research (competition methods, VeRi, decoding, recipe) | ✅ | 26 Sep: 2026 DINOv3 vehicle re-ID paper (256 px, one strong backbone + re-rank, big batch 512), AI City 2021 winners; only untested lever = bigger batch (C7) |
 
@@ -126,7 +126,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I14 | Error analysis on the held-out val split with real examples; back the "label errors" claim with example pairs (or drop the %) | ТЗ §9–§11, #50 | ✅ | = E3 + A8 (time-boxed) |
 | I15 | Remove HANDOFF.md (personal/informal) from the public repo before submission; PLAN.md → keep as dev log or move out | public repo | ✅ | before links go up |
 | I16 | Quarantine/remove forbidden reference code: experiments/posthoc.py "ALL QUERIES [FORBIDDEN]" re-rank | #40 (source code is checked) | ✅ | cleanup (H3) |
-| I17 | Commit docs/speed_log_falcon.csv (speed evidence); delete stray root data.py (check unused) + old .patch files | H3 | ⬜ | |
+| I17 | Commit docs/speed_log_falcon.csv (speed evidence); delete stray root data.py (check unused) + old .patch files | H3 | ✅ | |
 | I18 | Hosted prototype: password-protected (do not publish organizers' images openly); online through the expert review (30 Sep–14 Oct) and the finals; CPU host is enough (~1.3 s/query two-stage) | ТЗ §13 | ⬜ | = F4 |
 | I19 | Presentation content check: no "~90% ceiling" framing; include VeRi rejection, plate test, model-choice-by-points table, honest errors | ТЗ §11 | ⬜ | teammate + Leen |
 | I20 | Submission links (repo, presentation PDF, prototype, docs) uploaded Monday evening; each opened logged-out to check | ТЗ §13, Telegram | ⬜ | |

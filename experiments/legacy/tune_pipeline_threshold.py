@@ -1,3 +1,6 @@
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
 import sys
 from pathlib import Path
 
@@ -6,7 +9,7 @@ import pandas as pd
 
 from reid import evaluate as official
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 
 SPLITS = (ROOT / "data" / "splits")
 pred = Path(sys.argv[1])                       # folder with all_candidates.csv

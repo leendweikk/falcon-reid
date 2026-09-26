@@ -6,6 +6,9 @@ Batch inference: produces the three official files.
 Works offline (backbones are built empty, then our trained weights are loaded),
 on GPU if available, otherwise on CPU.
 """
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
 import argparse
 import time
 from pathlib import Path
@@ -19,7 +22,7 @@ from reid.data import test_transform
 from reid.model import ReIDModel
 from reid.rerank import re_ranking_streaming
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 LONG_SIDE = 384        # identical to make_crops.py: crop by box, longer side -> 384, then 256x256
 
 

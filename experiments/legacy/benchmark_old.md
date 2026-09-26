@@ -1,3 +1,5 @@
+> **LEGACY** (Base + Small era, 24–25 Sep). Current speed numbers: `docs/speed_log_falcon.csv` and the README.
+
 # Speed benchmark
 
 Hardware: GPU = NVIDIA GeForce RTX 4050 Laptop GPU; CPU = 8 threads; torch 2.14.0+cu132
