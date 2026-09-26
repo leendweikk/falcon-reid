@@ -24,9 +24,9 @@ The model is chosen by **total points**, from measured numbers only.
 | A7 | Letterbox input | ❌ | rectangular input already lost; low expected gain; no GPU time |
 | A8 | **Label cleaning** (train only) | ⬜ | ~45% of the worst failures look like label errors. Manual review (Leen, no GPU). Also good for the defense |
 | A9 | **VeRi + plate blurring** | ⬜ | allowed #46/#47; blur for #48 safety. GPU: only if distillation is done by Sat evening. Must pass the gate |
-| A10 | **Two-stage** (fast ViT top-K → ensemble re-scores) | 🔄 | experiments/stage_tests.py ready (patch20) | allowed #28, not timed #31; measure the gain + total run ≤ ~4 min (#40); declare in README |
+| A10 | **Two-stage** (fast ViT top-100 → ensemble re-orders) | ✅ | **passes the gate**: s42 82.25 vs 79.36 (+2.89), s7 80.29 vs 78.15 (+2.15). Full ensemble 82.85/80.86. In falcon/ as mode `two_stage` (patch21). Allowed #28, not timed #31 |
 | A11 | **Distillation** ensemble → ViT (feature/similarity level, not logits) | ⬜ | first GPU job Saturday after the ViT decision |
-| A12 | Re-tune re-ranking k1/k2/λ/top-K for the final model | 🔄 | experiments/stage_tests.py (fixed 18-point grid) | cheap, no training; fixed grid, check both splits |
+| A12 | Re-tune re-ranking k1/k2/λ/top-K | ❌ | best grid point (k1=4,k2=2,λ=0.5): s42 +0.90 but s7 −0.12 → fails the gate; defaults k1=6,k2=2,λ=0.3 stay |
 | A13 | Gallery-side smoothing | ⬜ low | allowed #38; only if time |
 | A14 | Synthetic data (VehicleX) | ❌ | no time |
 | A15 | Plate-masking self-test (paint the plate area, check the mAP drop) | ⬜ | evidence for #48; needed if VeRi is used, nice for defense anyway |
@@ -36,7 +36,7 @@ The model is chosen by **total points**, from measured numbers only.
 |---|---|---|---|
 | B1–B3 | objective, 20% strangers, cos+gap signal | ✅ | |
 | B3b | cos+gap in the real code | ✅ | falcon/search.py; validation 0.9569 (patch16) |
-| B4 | **Re-tune the threshold for the FINAL fast model (ViT)** | ⬜ | threshold_study on both splits; update config |
+| B4 | **Re-tune the threshold for the FINAL pipeline** | 🔄 | tools/tune_threshold.py (plateau overlap on both splits, 20% open-set weighting) — run on two_stage |
 | B5 | README justification (plateau on 2 splits) | ⬜ | |
 
 ## C. Speed (20%)
@@ -47,19 +47,19 @@ The model is chosen by **total points**, from measured numbers only.
 | C3 | fp16 weights / channels_last / torch.compile | ⬜ low | same condition as C2 |
 | C4 | Slim fp16 weights without classifier | ✅ | tools/export_weights.py (cosine ≥ 0.99999) |
 | C5 | Choose the fast model by speed × accuracy | ✅ | **ViT (20 ep)**: s42 79.14 vs Base 78.98, s7 78.00 vs Base 76.04; 33.8 ms vs 50.8 ms |
-| C6 | **Rent an RTX A5000** (real speed + real Docker GPU test) | ⬜ | Monday, after the Docker image works |
+| C6 | **Rent an RTX A5000** (real speed + real Docker GPU test) | ⬜ | Monday. Pick a machine with **driver 12.2 (R535)** like the judges' (#32) |
 
 ## D. Docker / reproducibility (mandatory)
 | # | Item | Status | Notes |
 |---|---|---|---|
-| D1 | **extractor.py / extract() contract** | ⬜ ⚠️ | #43 mentions it; we have `falcon.extract(image, bbox)`. Check Telegram: was the question sent/answered? |
+| D1 | extractor.py / extract() contract | ✅ | moderator 26 Sep: "a mistake, don't pay attention" → our `falcon.extract(image, bbox)` stays |
 | D2 | CUDA-12 torch (not CUDA 13) | ✅ | Dockerfile: torch 2.14.0 from cu126 index + build-time assert |
 | D3 | Pinned versions + sha256 weights | 🔄 | manifest + fetch_weights done; **GitHub Release with the final weights** todo |
 | D4 | Offline run | 🔄 | tested without network in the sandbox; real test in Docker todo |
-| D5 | Total run time within ~latency×n×3 | ⬜ | measure the full batch run in Docker |
+| D5 | Total run time within ~latency×n×3 | 🔄 | two-stage val run on the laptop: ViT 26 s + ensemble 83 s + search 13 s for 1,895 images; measure the real test run (1,860) |
 | D6 | Output format = example_submission.zip + passes evaluate.py | ✅ | checked 26 Sep |
 | D7 | Clean-machine test | ⬜ | teammate, Monday |
-| D8 | **Install WSL + Docker Desktop** on the laptop | 🔄 | WSL + Ubuntu installed 26 Sep 09:50; Docker Desktop next |
+| D8 | Install WSL + Docker Desktop | ✅ | 26 Sep: WSL + Ubuntu + Docker Desktop 4.92; GPU visible in a container (RTX 4050, driver 610 / CUDA 13.3) |
 | D9 | Regenerate `submission/` from the final pipeline | ⬜ | current files are from the old Base+Small |
 
 ## E. Docs
@@ -82,6 +82,8 @@ The model is chosen by **total points**, from measured numbers only.
 | F5 | 10^6-gallery ANN demo (HNSW) | ⬜ | tie-breaker |
 | F6 | Grad-CAM in the UI | ⬜ low | tie-breaker |
 | F7 | API_CONTRACT without plate_number | ✅ | patch18 |
+| F8 | Service uses the SAME pipeline as the submission (two-stage) | ⬜ | before switching config "mode" to two_stage |
+| D10 | Test the judges' driver 12.2 before Monday (Leen's own laptop if it has an NVIDIA GPU: driver 536.xx) | ⬜ | waiting for Leen's GPU check |
 
 ## G. Presentation (defense 10%)
 | # | Item | Status | Notes |
@@ -94,7 +96,7 @@ The model is chosen by **total points**, from measured numbers only.
 | # | Item | Status | Notes |
 |---|---|---|---|
 | H1 | Teammate tasks: slides, UI polish, clean-machine test | ⬜ | agree on Saturday |
-| H2 | Telegram: upload-button contents, prototype online duration, D1 | ⬜ | |
+| H2 | Organizer questions: upload contents, prototype online duration | 🔄 | sent 26 Sep; moderator passed them to the mentor |
 | H3 | Repo cleanup: loose scripts into folders, old .patch files, stray data.py, queue scripts | ⬜ | |
 | H4 | Back up the new weights (Drive) | ⬜ | after the final models exist |
 | H5 | Deep research promised on 25 Sep (competition methods, VeRi use, decoding) | 🔄 | CUDA part done; Leen's docx read 26 Sep; rest folded into A9–A11 decisions |

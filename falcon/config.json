@@ -28,6 +28,22 @@
       "refusal_threshold": null,
       "_threshold_source": "candidate fast model (ViT alone, no flip): threshold not tuned yet"
     },
+    "two_stage": {
+      "models": [
+        {
+          "name": "vit",
+          "backbone": "vit_base_patch16_dinov3.lvd1689m",
+          "file": "weights/vit_infer.pth",
+          "weight": 1.0
+        }
+      ],
+      "flip": false,
+      "rescore_mode": "accurate",
+      "rescore_topk": 100,
+      "refusal_threshold": null,
+      "_comment": "stage 1 = fast ViT (the timed extract(), its vectors go to embeddings.npy); stage 2 = Base+ViT ensemble with flip re-orders the ViT top-100 (answer #28, not timed #31). Val: +2.89 (s42) / +2.15 (s7) vs fast ViT",
+      "_threshold_source": "NOT TUNED YET: tools/tune_threshold.py on both splits"
+    },
     "accurate": {
       "models": [
         {

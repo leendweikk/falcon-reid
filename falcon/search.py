@@ -34,18 +34,37 @@ def rank_candidates(q, cand_vecs, cand_cos, k1=6, k2=2, lam=0.3, rerank=True):
 
 
 class Gallery:
-    def __init__(self, vectors, ids, k1=6, k2=2, lam=0.3, topk=100, rerank=True):
-        g = np.asarray(vectors, dtype=np.float32)
-        self.g = g / np.linalg.norm(g, axis=1, keepdims=True)
+    """In-memory gallery for the batch run.
+
+    rescore_vectors (optional) = TWO-STAGE search (answer #28): the fast vectors pick the cosine top-K
+    candidates; the heavier rescore vectors (Base+ViT ensemble) re-order ONLY those candidates, and the
+    refusal signal is computed from them. Still one query at a time (answer #38)."""
+
+    def __init__(self, vectors, ids, k1=6, k2=2, lam=0.3, topk=100, rerank=True, rescore_vectors=None):
+        self.g = _unit(vectors)
+        self.g2 = None if rescore_vectors is None else _unit(rescore_vectors)
         self.ids = list(ids)
         self.k1, self.k2, self.lam, self.topk, self.rerank = k1, k2, lam, topk, rerank
 
-    def search(self, q, n=10):
-        """q: (D,) vector of ONE query. Returns (ranked gallery indices [n], top-1 index, cos+gap)."""
-        q = np.asarray(q, dtype=np.float32)
-        q = q / np.linalg.norm(q)
+    def search(self, q, n=10, q_rescore=None):
+        """q: (D,) fast vector of ONE query (+ q_rescore for two-stage).
+        Returns (ranked gallery indices [n], top-1 index, cos+gap)."""
+        q = _unit(q[None])[0]
         cos = self.g @ q                                           # (G,)
         cand = np.argsort(-cos, kind="stable")[:max(min(self.topk, len(cos)), min(n, len(cos)))]
-        order, conf = rank_candidates(q, self.g[cand], cos[cand], self.k1, self.k2, self.lam, self.rerank)
+        if self.g2 is None:
+            q2, g2, c2 = q, self.g[cand], cos[cand]
+        else:                                                      # stage 2: re-order the candidates
+            q2 = _unit(q_rescore[None])[0]
+            c2 = self.g2[cand] @ q2
+            pre = np.argsort(-c2, kind="stable")                   # rank_candidates expects cosine order
+            cand, c2 = cand[pre], c2[pre]
+            g2 = self.g2[cand]
+        order, conf = rank_candidates(q2, g2, c2, self.k1, self.k2, self.lam, self.rerank)
         ranked = cand[order][:n]
         return ranked, int(ranked[0]), conf
+
+
+def _unit(x):
+    x = np.asarray(x, dtype=np.float32)
+    return x / np.linalg.norm(x, axis=1, keepdims=True)
