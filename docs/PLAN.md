@@ -36,7 +36,7 @@ The model is chosen by **total points**, from measured numbers only.
 |---|---|---|---|
 | B1–B3 | objective, 20% strangers, cos+gap signal | ✅ | |
 | B3b | cos+gap in the real code | ✅ | falcon/search.py; validation 0.9569 (patch16) |
-| B4 | **Re-tune the threshold for the FINAL pipeline** | 🔄 | tools/tune_threshold.py (plateau overlap on both splits, 20% open-set weighting) — run on two_stage |
+| B4 | **Re-tune the threshold for the FINAL pipeline** | 🔄 | two_stage (Base flip+ViT flip): **0.809** from plateau overlap 0.779–0.839; score 0.9669 on both splits (fast Base had 0.957/0.962). Re-run if stage 2 changes |
 | B5 | README justification (plateau on 2 splits) | ⬜ | |
 
 ## C. Speed (20%)
@@ -56,7 +56,7 @@ The model is chosen by **total points**, from measured numbers only.
 | D2 | CUDA-12 torch (not CUDA 13) | ✅ | Dockerfile: torch 2.14.0 from cu126 index + build-time assert |
 | D3 | Pinned versions + sha256 weights | 🔄 | manifest + fetch_weights done; **GitHub Release with the final weights** todo |
 | D4 | Offline run | 🔄 | tested without network in the sandbox; real test in Docker todo |
-| D5 | Total run time within ~latency×n×3 | 🔄 | two-stage val run on the laptop: ViT 26 s + ensemble 83 s + search 13 s for 1,895 images; measure the real test run (1,860) |
+| D5 | Total run time within ~latency×n×3 | 🔄 | two_stage val run 26 Sep ON BATTERY: 210 s for 1,895 images vs ~192 s limit (laptop). Morning plugged-in stage-2 pass: 83 s. Testing cheaper stage 2 (experiments/stage2_variants.py); always benchmark PLUGGED IN |
 | D6 | Output format = example_submission.zip + passes evaluate.py | ✅ | checked 26 Sep |
 | D7 | Clean-machine test | ⬜ | teammate, Monday |
 | D8 | Install WSL + Docker Desktop | ✅ | 26 Sep: WSL + Ubuntu + Docker Desktop 4.92; GPU visible in a container (RTX 4050, driver 610 / CUDA 13.3) |
