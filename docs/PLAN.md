@@ -130,7 +130,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I18 | Hosted prototype: password-protected (do not publish organizers' images openly); online through the expert review (30 Sep–14 Oct) and the finals; CPU host is enough (~1.3 s/query two-stage) | ТЗ §13 | ⬜ | = F4 |
 | I19 | Presentation content check: no "~90% ceiling" framing; include VeRi rejection, plate test, model-choice-by-points table, honest errors | ТЗ §11 | ⬜ | teammate + Leen |
 | I20 | Submission links (repo, presentation PDF, prototype, docs) uploaded Monday evening; each opened logged-out to check | ТЗ §13, Telegram | ⬜ | |
-| I21 | Refresh RULES_CHECKLIST.md statuses and walk it line by line before upload | own rule | ⬜ | last step before upload |
+| I21 | Refresh RULES_CHECKLIST.md statuses and walk it line by line before upload | own rule | 🔄 | refreshed 26 Sep (patch38) with evidence per rule; final walk-through before upload |
 | I22 | Rejected ideas documented with reasons (distillation, torch.compile, TensorRT, INT8, letterbox, ConvNeXt-L, VeRi, 320, re-rank tuning, GeM, camera-aware, soup, CosFace) | defense, reviews | ✅ | = E2 |
 | C7 | Rented GPU: speed test + bigger-batch ViT | ❌ | dropped 26 Sep: no budget; bigger batch also not worth reopening the verified release for < 1 mAP (one untuned try) |
 

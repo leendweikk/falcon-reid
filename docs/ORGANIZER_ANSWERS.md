@@ -48,8 +48,10 @@ Reference only (no points): full-ranking mAP and mINP from `embeddings.npy`; PR-
 - Weight size = all weight files used at inference (.pt .pth .bin .onnx .engine .safetensors …) (#37).
 - Batch run: they pass the images folder + CSVs and expect the 3 files; time limit ≈ latency_b1 × n_test × 3 (~4 min now) (#40).
 - `docker build` may use the network; pinned versions (`==`); weights in the repo or downloaded in the Dockerfile **with sha256 check**; pretrained weights pinned by version with checksum (#39).
-- Mandatory minimum: one command producing the 3 files. The full service (DB + web UI) must also start with one command (`docker-compose up`) offline (#41) and is part of ТЗ §6 (engineering quality).
+- Mandatory minimum: one command producing the 3 files (#41). The full service (DB + web UI) is an **optional extra**: it counts only as a tie-breaker, not in the main 90% (#41, #43, #44), but if presented it must also start with one command (`docker-compose up`) offline (#41). We present it (ТЗ §6 describes it).
 
-## Still unknown
-- The `extractor.py` contract mentioned in #43 (not in the dataset README, ТЗ or example_submission.zip) — asked.
-- How long the demo prototype must stay online (Telegram, unanswered).
+## Clarified later / still unknown
+- The `extractor.py` contract mentioned in #43: the moderator answered on 26 Sep that it was a mistake — our `falcon.extract(image, bbox)` is the timed function.
+- Train rows 7380 / 2280 flagged by another team: re-checked by the organizers, no overlap with the test (#7).
+- How long the demo prototype must stay online: unanswered (we keep it online through the expert review and the finals).
+- Length of the final defense (О-4): unanswered.
