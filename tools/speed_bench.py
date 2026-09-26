@@ -13,6 +13,7 @@ Points: latency <= 40 ms -> 10, 40-80 linear, > 80 -> 0; FPS >= 100 -> 10, 50-10
 Run it only when the GPU is otherwise idle. Results are appended to docs/speed_log_falcon.csv.
 """
 import argparse
+import platform
 import sys
 import time
 from pathlib import Path
@@ -106,7 +107,9 @@ def main():
         print(f"{k:>22}: {v}")
     print(f"\n  => speed points on THIS machine: {row['points_latency'] + row['points_fps']:.1f} / 20")
     log = ROOT / "docs" / "speed_log_falcon.csv"
-    pd.DataFrame([row]).to_csv(log, mode="a", header=not log.exists(), index=False)
+    new = pd.DataFrame([{"machine": platform.node(), **row}])
+    old = pd.read_csv(log) if log.exists() else None
+    (new if old is None else pd.concat([old, new], ignore_index=True)).to_csv(log, index=False)   # union of columns
     print(f"appended -> {log}")
 
 

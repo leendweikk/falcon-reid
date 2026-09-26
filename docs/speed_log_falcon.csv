@@ -1,5 +1,7 @@
-mode,decode,gpu,torch,latency_b1_ms,fps_b1,fps_b8,fps_b16,fps_b32,best_fps,peak_vram_mb,weights_mb,load_s,determinism_max_diff,points_latency,points_fps
-fast,pil,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,50.84,27.2,93.8,105.2,104.8,105.2,815,167,3.35,0.0,7.29,10.0
-fast_vit,pil,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,33.79,30.1,103.1,107.0,102.1,107.0,726,163,1.57,0.0,10.0,10.0
-accurate,pil,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,85.1,11.7,46.9,46.2,43.1,46.9,1334,331,2.67,0.0,0.0,0.0
-fast_vit,pil,12,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,27.22,33.5,128.3,135.2,126.7,135.2,726,163,3.31,0.0,10.0,10.0
+machine,mode,decode,decode_workers,cpu_threads,gpu,torch,latency_b1_ms,fps_b1,fps_b8,fps_b16,fps_b32,best_fps,peak_vram_mb,weights_mb,load_s,determinism_max_diff,points_latency,points_fps
+laptop,fast,pil,8,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,50.84,27.2,93.8,105.2,104.8,105.2,815,167,3.35,0.0,7.29,10.0
+laptop,fast_vit,pil,8,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,33.79,30.1,103.1,107.0,102.1,107.0,726,163,1.57,0.0,10.0,10.0
+laptop,accurate,pil,8,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,85.1,11.7,46.9,46.2,43.1,46.9,1334,331,2.67,0.0,0.0,0.0
+Google Colab (free),fast_vit,pil,8,2,Tesla T4,2.14.0+cu126,36.61,25.1,39.3,45.7,47.2,47.2,726,163,2.33,0.0,10.0,0.0
+Google Colab (free),fast_vit,pil-draft,8,2,Tesla T4,2.14.0+cu126,32.29,29.7,42.2,46.0,48.8,48.8,726,163,2.33,0.0,10.0,0.0
+laptop,fast_vit,pil,12,12,NVIDIA GeForce RTX 4050 Laptop GPU,2.14.0+cu132,27.22,33.5,128.3,135.2,126.7,135.2,726,163,3.31,0.0,10.0,10.0

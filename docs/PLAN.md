@@ -45,11 +45,11 @@ The model is chosen by **total points**, from measured numbers only.
 | # | Item | Status | Notes |
 |---|---|---|---|
 | C1 | Official-protocol benchmark on what we ship | ✅ | tools/speed_bench.py. Laptop: ViT 33.8 ms / 107 FPS (20/20), Base 50.8 ms (17.3), ensemble 85 ms (0) |
-| C2 | Fast decoding (pil-draft / nvJPEG) | ⬜ low | ViT already under 40 ms; only if A5000 margin is thin. Accuracy check required |
+| C2 | Fast decoding (pil-draft / nvJPEG) | ❌ | pil-draft tested on Colab: 32.3 ms / 48.8 FPS vs 36.6 / 47.2 — draft only triggers for boxes ≥ 768 px (most boxes ~670 px), so little gain; kept plain PIL. The real lever was parallel decode workers (patch33, +26% FPS) |
 | C3 | fp16 weights / channels_last / torch.compile | ⬜ low | same condition as C2 |
 | C4 | Slim fp16 weights without classifier | ✅ | tools/export_weights.py (cosine ≥ 0.99999) |
 | C5 | Choose the fast model by speed × accuracy | ✅ | **ViT (20 ep)**: s42 79.14 vs Base 78.98, s7 78.00 vs Base 76.04; 33.8 ms vs 50.8 ms |
-| C6 | **Rent an RTX A5000** (real speed + real Docker GPU test) | ⬜ ⚠️ | **Moved BEFORE the Sunday freeze**: it is the only measurement that could still change the model choice (40 ms bar, whole-run limit ≈ latency×n×3, #40). Speed test = any A5000 pod; Docker GPU test needs a full VM. Pick driver 12.2 (R535) like the judges' (#32) |
+| C6 | Rent an RTX A5000 | ❌ | dropped 26 Sep: no budget; replaced by the free Colab T4 test (a harder machine than the judges') — see I7 |
 
 ## D. Docker / reproducibility (mandatory)
 | # | Item | Status | Notes |
@@ -116,7 +116,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I4 | GitHub Release weights-v1 (base_infer + vit_infer + LICENSE_DINOv3.md) + real sha256/bytes in manifest | #39, ТЗ §9 reproducibility | ✅ | release published 26 Sep; verified from a fresh clone on a clean machine: both downloads pass sha256, both stages load offline (768-d / 1792-d) |
 | I5 | torch 2.14.0+cu126 wheel exists for cp311 linux | D2 | ✅ | checked on download.pytorch.org 26 Sep |
 | I6 | Real Docker build from a fresh clone + offline run (`--network none`) + no OOM | ТЗ §6–§8, #39–#41 | ✅ | 26 Sep laptop (Docker Desktop, RTX 4050): build 657 s, all checks pass; offline GPU run TOTAL 98.1 s, answered 991/1110. vs laptop run: top-1 identical 100%, full top-10 rows identical 98.6% (the rest = near-ties swapped by fp16 math of a different CUDA build), embeddings min cosine 0.999999, same answered set → reproduced. Say this in the README |
-| I7 | Speed on a weaker-than-judges machine (free Colab T4, 2 CPU threads, driver 580) + determinism | #30–#34, #31 | 🔄 | 26 Sep Colab, torch 2.14.0+cu126, released weights: **latency 36.6 ms → 10/10** even there; **determinism 0.0**; FPS 47 = CPU-bound (2 threads decode), not predictive for the judges' 128 threads. pil-draft: 32.3 ms / 48.8 FPS (draft only triggers for boxes ≥ 768 px, so little gain). → patch33: decode_workers = auto (one per CPU thread, max 16). Laptop re-check pending. Paid A5000 rental dropped (no budget) |
+| I7 | Speed + determinism on more than one machine | #30–#34, #31 | ✅ | **Colab T4 (2 CPU threads, driver 580, torch cu126, released weights): 36.6 ms → 10/10 latency; 47 FPS = CPU-decode bound; determinism 0.0.** Laptop after patch33 (12 decode workers): **27.2 ms, 135 FPS → 20/20; determinism 0.0**. Full run 86.5 s vs limit ≈ 27.2 × 1860 × 3 ≈ 152 s (57%). Not measured (no budget): the exact A5000 + driver 12.2 and the judges' CPU-thread limit → README explains that FPS grows with CPU threads. All rows in docs/speed_log_falcon.csv |
 | I8 | Live build demo on request | ТЗ §6 «продемонстрировать процесс сборки … в реальном времени» | ⬜ | rehearse once; note build time |
 | I9 | DINOv3 pretrained weights: exact source (timm/HF id + revision) and licence notice for our released fine-tuned weights | #39, #46 | ⬜ | README + release notes |
 | I10 | README states: embeddings.npy = stage-1 ViT vectors, submission.csv = two-stage order (why they differ) + re-ranking described | #12, #28 | ⬜ | part of E1 |
@@ -132,7 +132,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I20 | Submission links (repo, presentation PDF, prototype, docs) uploaded Monday evening; each opened logged-out to check | ТЗ §13, Telegram | ⬜ | |
 | I21 | Refresh RULES_CHECKLIST.md statuses and walk it line by line before upload | own rule | ⬜ | last step before upload |
 | I22 | Rejected ideas documented with reasons (distillation, torch.compile, TensorRT, INT8, letterbox, ConvNeXt-L, VeRi, 320, re-rank tuning, GeM, camera-aware, soup, CosFace) | defense, reviews | ⬜ | = E2 |
-| C7 | Decision: rent an A5000 for speed test (+ optional bigger-batch ViT P=32 gate, stop by Sun 14:00) | research 26 Sep | ⬜ | Leen decides; ~$1 |
+| C7 | Rented GPU: speed test + bigger-batch ViT | ❌ | dropped 26 Sep: no budget; bigger batch also not worth reopening the verified release for < 1 mAP (one untuned try) |
 
 ## Order from 26 Sep 16:15 (one step at a time; tick items above as they finish)
 **Saturday:** I2 final pipeline on the public test → C7 rental decision → (rental: I7 speed/driver/determinism, optional bigger-batch gate) → I4 weights release → I6 Docker build from a fresh clone, offline.
