@@ -97,17 +97,45 @@ The model is chosen by **total points**, from measured numbers only.
 ## H. Team, organizers, housekeeping
 | # | Item | Status | Notes |
 |---|---|---|---|
-| H1 | Teammate tasks: slides, UI polish, clean-machine test | ⬜ | agree on Saturday |
+| H1 | Teammate: presentation in her own Claude chat (English content; template slides 7–11 keep their Russian labels), diagrams, UI screenshots, Monday clean-machine test | 🔄 | brief + prompt sent 26 Sep; all technical claims come from Leen/this chat; numbers = XX until the freeze |
 | H2 | Organizer questions: upload contents, prototype online duration | 🔄 | sent 26 Sep; moderator passed them to the mentor |
 | H3 | Repo cleanup: loose scripts into folders, old .patch files, stray data.py, queue scripts | ⬜ | |
 | H4 | Back up the new weights (Drive) | ⬜ | after the final models exist |
-| H5 | Deep research promised on 25 Sep (competition methods, VeRi use, decoding) | 🔄 | CUDA part done; Leen's docx read 26 Sep; rest folded into A9–A11 decisions |
+| H5a | Deep research (competition methods, VeRi, decoding, recipe) | ✅ | 26 Sep: 2026 DINOv3 vehicle re-ID paper (256 px, one strong backbone + re-rank, big batch 512), AI City 2021 winners; only untested lever = bigger batch (C7) |
 
 ---
 
-## Saturday 26 Sep: order
-1. Night-queue results → ViT recipe decision (A2) → final ViT chosen.
-2. Install WSL + Docker (D8), restart.
-3. Threshold for the ViT (B4) · two-stage test (A10) · re-rank tuning (A12). All short, no training.
-4. GPU: distillation (A11); then VeRi (A9) only if there's time before Sunday 20:00.
-5. In parallel, no GPU: README (E1), label review (A8, Leen), Telegram questions (H2, D1), teammate plan (H1), template (G1).
+## I. Full audit 26 Sep 16:15 — every rule and every review point mapped to an item
+Sources walked line by line: ТЗ §3–§13, dataset README, evaluate.py, all 54 official answers (original
+sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside reviews, Claude's review.
+| # | Item | Source | Status | Notes |
+|---|---|---|---|---|
+| I1 | **Final ViT exported to weights/vit_infer.pth** | D3, #39 | ✅ | was MISSING until 26 Sep 16:12 (config pointed at a file that did not exist). sha256 ca781eacac1f6c39ae358378d3ab118d36b156c451f178c60f7e1038aa6506ed |
+| I2 | Full final pipeline run on the public test (two-stage default) → time vs limit, answered count | D5, D9, #40 | 🔄 | `python -m falcon.predict ... --out runs/final_public`; then copy the 3 files to submission/ |
+| I3 | .dockerignore whitelists ONLY manifest + the 2 inference files | #37 (all weight files in the solution dir count, cap 2 GB) | ✅ | patch30; before, a local build copied ~1.8 GB of training/validation weights into the image |
+| I4 | GitHub Release weights-v1 (base_infer + vit_infer) + real sha256/bytes in manifest (`fetch_weights.py --update`) | #39, ТЗ §9 reproducibility | ⬜ ⚠️ | without it a build from a fresh clone FAILS = disqualification risk |
+| I5 | torch 2.14.0+cu126 wheel exists for cp311 linux | D2 | ✅ | checked on download.pytorch.org 26 Sep |
+| I6 | Real Docker build from a fresh clone + offline run (`--network none`) + outputs pass evaluate.py format + no OOM | ТЗ §6–§8, #39–#41 | ⬜ ⚠️ | after I4 |
+| I7 | A5000 speed + driver 12.2 + determinism (two runs identical) | #30–#34, #31 determinism | ⬜ | rental (C7) |
+| I8 | Live build demo on request | ТЗ §6 «продемонстрировать процесс сборки … в реальном времени» | ⬜ | rehearse once; note build time |
+| I9 | DINOv3 pretrained weights: exact source (timm/HF id + revision) and licence notice for our released fine-tuned weights | #39, #46 | ⬜ | README + release notes |
+| I10 | README states: embeddings.npy = stage-1 ViT vectors, submission.csv = two-stage order (why they differ) + re-ranking described | #12, #28 | ⬜ | part of E1 |
+| I11 | README lists ALL libraries/frameworks/datasets WITH versions; datasets = organizers' only (VeRi tried, rejected, not used); plate detector listed as analysis-only tool | ТЗ §7, §12; #46 | ⬜ | part of E1 |
+| I12 | README language: English + a short Russian summary at the top (recommended) | judges are Russian | ⬜ | Leen decides |
+| I13 | Threshold justification in README (plateau on 2 splits, 20% open-set re-weighting, 0.7·F1+0.3·TNR) | README dataset, #26, ТЗ §12 | ⬜ | = B5 |
+| I14 | Error analysis on the held-out val split with real examples; back the "label errors" claim with example pairs (or drop the %) | ТЗ §9–§11, #50 | ⬜ | = E3 + A8 (time-boxed) |
+| I15 | Remove HANDOFF.md (personal/informal) from the public repo before submission; PLAN.md → keep as dev log or move out | public repo | ⬜ | before links go up |
+| I16 | Quarantine/remove forbidden reference code: experiments/posthoc.py "ALL QUERIES [FORBIDDEN]" re-rank | #40 (source code is checked) | ⬜ | cleanup (H3) |
+| I17 | Commit docs/speed_log_falcon.csv (speed evidence); delete stray root data.py (check unused) + old .patch files | H3 | ⬜ | |
+| I18 | Hosted prototype: password-protected (do not publish organizers' images openly); online through the expert review (30 Sep–14 Oct) and the finals; CPU host is enough (~1.3 s/query two-stage) | ТЗ §13 | ⬜ | = F4 |
+| I19 | Presentation content check: no "~90% ceiling" framing; include VeRi rejection, plate test, model-choice-by-points table, honest errors | ТЗ §11 | ⬜ | teammate + Leen |
+| I20 | Submission links (repo, presentation PDF, prototype, docs) uploaded Monday evening; each opened logged-out to check | ТЗ §13, Telegram | ⬜ | |
+| I21 | Refresh RULES_CHECKLIST.md statuses and walk it line by line before upload | own rule | ⬜ | last step before upload |
+| I22 | Rejected ideas documented with reasons (distillation, torch.compile, TensorRT, INT8, letterbox, ConvNeXt-L, VeRi, 320, re-rank tuning, GeM, camera-aware, soup, CosFace) | defense, reviews | ⬜ | = E2 |
+| C7 | Decision: rent an A5000 for speed test (+ optional bigger-batch ViT P=32 gate, stop by Sun 14:00) | research 26 Sep | ⬜ | Leen decides; ~$1 |
+
+## Order from 26 Sep 16:15 (one step at a time; tick items above as they finish)
+**Saturday:** I2 final pipeline on the public test → C7 rental decision → (rental: I7 speed/driver/determinism, optional bigger-batch gate) → I4 weights release → I6 Docker build from a fresh clone, offline.
+**Sunday:** (only if the bigger batch passed: final ViT retrain + threshold re-tune, then redo I2/I4) · E1 README (I9–I13) · E2/I22 experiments · E3/I14 error analysis · H3/I15–I17 cleanup · model freeze 20:00 at the latest.
+**Monday:** D7 clean-machine test (teammate) · presentation PDF (G, I19) · hosted prototype (I18) · I21 rules walk-through · I20 upload links in the evening.
+**Tuesday:** buffer only; fix what the clean-machine test found; nothing new after ~20:00.

@@ -8,7 +8,9 @@ docs
 experiments
 **/__pycache__
 *.patch
-weights/*.part
-weights/base.pth
-weights/small.pth
-weights/vit.pth
+# weights: ONLY the manifest and the two inference files go into the image (answer #37: every weight
+# file in the solution counts toward the 2 GB cap; training/validation weights must stay out)
+weights/*
+!weights/manifest.json
+!weights/base_infer.pth
+!weights/vit_infer.pth
