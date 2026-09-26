@@ -47,7 +47,7 @@ train_transform, test_transform = make_transforms(INPUT_HW)
 class TrainSet(Dataset):
     """Returns (image, car_label). Accepts one CSV path or a list of CSV paths (merged)."""
 
-    def __init__(self, csv_paths, transform=None):
+    def __init__(self, csv_paths, transform=None, return_index=False):
         # the transform is stored ON the dataset, so Windows worker processes get the right size
         self.transform = transform or train_transform
         if not isinstance(csv_paths, (list, tuple)):
@@ -58,6 +58,7 @@ class TrainSet(Dataset):
         # camera per photo: used ONLY to build batches (allowed, official answer #2), never as model input
         self.cams = df.camera_id.tolist() if "camera_id" in df.columns else [0] * len(df)
         self.num_classes = len(self.car_to_label)
+        self.return_index = return_index            # distillation looks up the teacher vector by index
 
     def __len__(self):
         return len(self.items)
@@ -65,6 +66,8 @@ class TrainSet(Dataset):
     def __getitem__(self, i):
         image_id, label = self.items[i]
         img = Image.open(CROPS / f"{image_id}.jpg").convert("RGB")
+        if self.return_index:
+            return self.transform(img), label, i
         return self.transform(img), label
 
 

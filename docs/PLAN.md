@@ -25,7 +25,7 @@ The model is chosen by **total points**, from measured numbers only.
 | A8 | **Label cleaning** (train only) | ⬜ | ~45% of the worst failures look like label errors. Manual review (Leen, no GPU). Also good for the defense |
 | A9 | **VeRi + plate blurring** | ⬜ | allowed #46/#47; blur for #48 safety. GPU: only if distillation is done by Sat evening. Must pass the gate |
 | A10 | **Two-stage** (fast ViT top-100 → ensemble re-orders) | ✅ | **passes the gate**: s42 82.25 vs 79.36 (+2.89), s7 80.29 vs 78.15 (+2.15). Full ensemble 82.85/80.86. In falcon/ as mode `two_stage` (patch21). Allowed #28, not timed #31 |
-| A11 | **Distillation** ensemble → ViT (feature/similarity level, not logits) | ⬜ | first GPU job Saturday after the ViT decision |
+| A11 | **Distillation** ensemble → ViT (relational KD, tau 0.1, weight 1) | 🔄 | queue_distill.ps1 (patch23): teacher vectors + student on s42 and s7, fast-mode evals vs 79.14 / 78.00 |
 | A12 | Re-tune re-ranking k1/k2/λ/top-K | ❌ | best grid point (k1=4,k2=2,λ=0.5): s42 +0.90 but s7 −0.12 → fails the gate; defaults k1=6,k2=2,λ=0.3 stay |
 | A13 | Gallery-side smoothing | ⬜ low | allowed #38; only if time |
 | A14 | Synthetic data (VehicleX) | ❌ | no time |
@@ -56,7 +56,7 @@ The model is chosen by **total points**, from measured numbers only.
 | D2 | CUDA-12 torch (not CUDA 13) | ✅ | Dockerfile: torch 2.14.0 from cu126 index + build-time assert |
 | D3 | Pinned versions + sha256 weights | 🔄 | manifest + fetch_weights done; **GitHub Release with the final weights** todo |
 | D4 | Offline run | 🔄 | tested without network in the sandbox; real test in Docker todo |
-| D5 | Total run time within ~latency×n×3 | 🔄 | two_stage val run 26 Sep ON BATTERY: 210 s for 1,895 images vs ~192 s limit (laptop). Morning plugged-in stage-2 pass: 83 s. Testing cheaper stage 2 (experiments/stage2_variants.py); always benchmark PLUGGED IN |
+| D5 | Total run time within ~latency×n×3 | ✅ | PLUGGED IN, stage-2 variants (26 Sep): a) Base flip+ViT flip 96 s / 89 s vs limit ~192 / 186 s (≈50%) → **keep a)**. b) ViT reused −0.46/−0.35 (not needed), c) Base no-flip −0.19/**−1.51** (fails s7). Re-measure on the A5000 (C6) |
 | D6 | Output format = example_submission.zip + passes evaluate.py | ✅ | checked 26 Sep |
 | D7 | Clean-machine test | ⬜ | teammate, Monday |
 | D8 | Install WSL + Docker Desktop | ✅ | 26 Sep: WSL + Ubuntu + Docker Desktop 4.92; GPU visible in a container (RTX 4050, driver 610 / CUDA 13.3) |

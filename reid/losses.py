@@ -23,6 +23,26 @@ class TripletLoss(nn.Module):
         return F.relu(hardest_pos - hardest_neg + self.margin).mean()
 
 
+class RelationalKD(nn.Module):
+    """Distillation of the ensemble into one model (docs/PLAN.md A11), at the level of RELATIONS:
+    inside a batch, each photo's similarity profile to the other photos (a softmax over cosine
+    similarities / tau) should match the teacher's profile. Works although the student (768-d) and
+    the teacher (Base+ViT, 1792-d) have different sizes, and needs no teacher classifier."""
+
+    def __init__(self, tau=0.1):
+        super().__init__()
+        self.tau = tau
+
+    def forward(self, student, teacher):
+        s = F.normalize(student.float(), dim=1)
+        t = F.normalize(teacher.float(), dim=1)
+        eye = torch.eye(len(s), dtype=torch.bool, device=s.device)
+        s_logits = (s @ s.T / self.tau).masked_fill(eye, -1e4)      # a photo is not compared with itself
+        t_logits = (t @ t.T / self.tau).masked_fill(eye, -1e4)
+        return F.kl_div(F.log_softmax(s_logits, dim=1), F.log_softmax(t_logits, dim=1),
+                        reduction="batchmean", log_target=True)
+
+
 class ReIDLoss(nn.Module):
     """Total loss = ID loss (with label smoothing) + triplet loss."""
 

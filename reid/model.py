@@ -40,6 +40,7 @@ class ReIDModel(nn.Module):
     def forward(self, x, labels=None):
         feat = self.embed(x)                         # raw fingerprint -> triplet loss
         feat_bn = self.bnneck(feat)                  # normalized fingerprint
+        self.last_feat_bn = feat_bn                  # the test-time fingerprint (used by distillation)
         if not self.training:
             return feat_bn                           # test time: embedding only
 
