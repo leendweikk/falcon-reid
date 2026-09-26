@@ -57,12 +57,12 @@ The model is chosen by **total points**, from measured numbers only.
 | D1 | extractor.py / extract() contract | ✅ | moderator 26 Sep: "a mistake, don't pay attention" → our `falcon.extract(image, bbox)` stays |
 | D2 | CUDA-12 torch (not CUDA 13) | ✅ | Dockerfile: torch 2.14.0 from cu126 index + build-time assert |
 | D3 | Pinned versions + sha256 weights | 🔄 | manifest + fetch_weights done; **GitHub Release with the final weights** todo |
-| D4 | Offline run | 🔄 | tested without network in the sandbox; real test in Docker todo |
+| D4 | Offline run | ✅ | real Docker run with `--network none` on 26 Sep (I6) |
 | D5 | Total run time within ~latency×n×3 | ✅ | PLUGGED IN, stage-2 variants (26 Sep): a) Base flip+ViT flip 96 s / 89 s vs limit ~192 / 186 s (≈50%) → **keep a)**. b) ViT reused −0.46/−0.35 (not needed), c) Base no-flip −0.19/**−1.51** (fails s7). Re-measure on the A5000 (C6) |
 | D6 | Output format = example_submission.zip + passes evaluate.py | ✅ | checked 26 Sep |
 | D7 | Clean-machine test | ⬜ | teammate, Monday |
 | D8 | Install WSL + Docker Desktop | ✅ | 26 Sep: WSL + Ubuntu + Docker Desktop 4.92; GPU visible in a container (RTX 4050, driver 610 / CUDA 13.3) |
-| D9 | Regenerate `submission/` from the final pipeline | ⬜ | current files are from the old Base+Small |
+| D9 | Regenerate `submission/` from the final pipeline | ✅ | 26 Sep, commit 848c9fa (I2) |
 
 ## E. Docs
 | # | Item | Status | Notes |
@@ -111,11 +111,11 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | # | Item | Source | Status | Notes |
 |---|---|---|---|---|
 | I1 | **Final ViT exported to weights/vit_infer.pth** | D3, #39 | ✅ | was MISSING until 26 Sep 16:12 (config pointed at a file that did not exist). sha256 ca781eacac1f6c39ae358378d3ab118d36b156c451f178c60f7e1038aa6506ed |
-| I2 | Full final pipeline run on the public test (two-stage default) → time vs limit, answered count | D5, D9, #40 | 🔄 | `python -m falcon.predict ... --out runs/final_public`; then copy the 3 files to submission/ |
+| I2 | Full final pipeline run on the public test (two-stage default) → time vs limit, answered count | D5, D9, #40 | ✅ | laptop 26 Sep: TOTAL 99.6 s vs limit ≈ 33.8 ms × 1860 × 3 ≈ 189 s (53%); answered 991/1110 at 0.809. The 3 files are in submission/ (commit 848c9fa) |
 | I3 | .dockerignore whitelists ONLY manifest + the 2 inference files | #37 (all weight files in the solution dir count, cap 2 GB) | ✅ | patch30; before, a local build copied ~1.8 GB of training/validation weights into the image |
-| I4 | GitHub Release weights-v1 (base_infer + vit_infer + LICENSE_DINOv3.md) + real sha256/bytes in manifest | #39, ТЗ §9 reproducibility | 🔄 | manifest filled 26 Sep (base 1e012b9e…, vit ca781eac…); DINOv3 licence allows redistribution if a copy of the licence goes with the weights (§1(b)(i)) → weights/LICENSE_DINOv3.md added (patch31); release upload next |
+| I4 | GitHub Release weights-v1 (base_infer + vit_infer + LICENSE_DINOv3.md) + real sha256/bytes in manifest | #39, ТЗ §9 reproducibility | ✅ | release published 26 Sep; verified from a fresh clone on a clean machine: both downloads pass sha256, both stages load offline (768-d / 1792-d) |
 | I5 | torch 2.14.0+cu126 wheel exists for cp311 linux | D2 | ✅ | checked on download.pytorch.org 26 Sep |
-| I6 | Real Docker build from a fresh clone + offline run (`--network none`) + outputs pass evaluate.py format + no OOM | ТЗ §6–§8, #39–#41 | ⬜ ⚠️ | after I4 |
+| I6 | Real Docker build from a fresh clone + offline run (`--network none`) + no OOM | ТЗ §6–§8, #39–#41 | ✅ | 26 Sep laptop (Docker Desktop, RTX 4050): build 657 s, all checks pass; offline GPU run TOTAL 98.1 s, answered 991/1110. vs laptop run: top-1 identical 100%, full top-10 rows identical 98.6% (the rest = near-ties swapped by fp16 math of a different CUDA build), embeddings min cosine 0.999999, same answered set → reproduced. Say this in the README |
 | I7 | A5000 speed + driver 12.2 + determinism (two runs identical) | #30–#34, #31 determinism | ⬜ | rental (C7) |
 | I8 | Live build demo on request | ТЗ §6 «продемонстрировать процесс сборки … в реальном времени» | ⬜ | rehearse once; note build time |
 | I9 | DINOv3 pretrained weights: exact source (timm/HF id + revision) and licence notice for our released fine-tuned weights | #39, #46 | ⬜ | README + release notes |
