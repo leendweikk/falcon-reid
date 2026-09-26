@@ -15,8 +15,8 @@ The model is chosen by **total points**, from measured numbers only.
 | # | Item | Status | Notes / evidence |
 |---|---|---|---|
 | A1 | Base+ViT ensemble | ✅ | 82.94 (s42) / 81.29 (s7), gate passed |
-| A2 | ViT recipe: 30 epochs vs 20 vs LLRD | 🔄 | s42 fast: e30 80.27, e20 79.14, llrd 78.97. Seed-7 check in night queue |
-| A2b | Final ViT on all 1,541 cars | 🔄 | night queue trains e30 AND e20; pick after the seed-7 check |
+| A2 | ViT recipe: 30 epochs vs 20 vs LLRD | ✅ | **20 epochs kept.** s42 fast: e30 80.27 vs e20 79.14, but s7: e30 77.06 vs e20 **78.00** → e30 fails the gate. LLRD 78.97 (rejected) |
+| A2b | Final ViT on all 1,541 cars | ✅ | `runs/final_vit_e20/vit.pth` (trained 26 Sep 02:27–03:07) |
 | A3 | Camera-aware batches | ❌ | 77.23 vs 78.98 (worse) |
 | A4 | GeM pooling | ❌ | 78.45 vs 78.98 (not better) |
 | A5 | P=32 batches | ❌ | doesn't fit in 6 GB (shared-memory spill, 5–12× slower) |
@@ -24,9 +24,9 @@ The model is chosen by **total points**, from measured numbers only.
 | A7 | Letterbox input | ❌ | rectangular input already lost; low expected gain; no GPU time |
 | A8 | **Label cleaning** (train only) | ⬜ | ~45% of the worst failures look like label errors. Manual review (Leen, no GPU). Also good for the defense |
 | A9 | **VeRi + plate blurring** | ⬜ | allowed #46/#47; blur for #48 safety. GPU: only if distillation is done by Sat evening. Must pass the gate |
-| A10 | **Two-stage** (fast ViT top-K → ensemble re-scores) | ⬜ | allowed #28, not timed #31; measure the gain + total run ≤ ~4 min (#40); declare in README |
+| A10 | **Two-stage** (fast ViT top-K → ensemble re-scores) | 🔄 | experiments/stage_tests.py ready (patch20) | allowed #28, not timed #31; measure the gain + total run ≤ ~4 min (#40); declare in README |
 | A11 | **Distillation** ensemble → ViT (feature/similarity level, not logits) | ⬜ | first GPU job Saturday after the ViT decision |
-| A12 | Re-tune re-ranking k1/k2/λ/top-K for the final model | ⬜ | cheap, no training; fixed grid, check both splits |
+| A12 | Re-tune re-ranking k1/k2/λ/top-K for the final model | 🔄 | experiments/stage_tests.py (fixed 18-point grid) | cheap, no training; fixed grid, check both splits |
 | A13 | Gallery-side smoothing | ⬜ low | allowed #38; only if time |
 | A14 | Synthetic data (VehicleX) | ❌ | no time |
 | A15 | Plate-masking self-test (paint the plate area, check the mAP drop) | ⬜ | evidence for #48; needed if VeRi is used, nice for defense anyway |
@@ -46,7 +46,7 @@ The model is chosen by **total points**, from measured numbers only.
 | C2 | Fast decoding (pil-draft / nvJPEG) | ⬜ low | ViT already under 40 ms; only if A5000 margin is thin. Accuracy check required |
 | C3 | fp16 weights / channels_last / torch.compile | ⬜ low | same condition as C2 |
 | C4 | Slim fp16 weights without classifier | ✅ | tools/export_weights.py (cosine ≥ 0.99999) |
-| C5 | Choose the fast model by speed × accuracy | 🔄 | ViT leads on both; final after the seed-7 check |
+| C5 | Choose the fast model by speed × accuracy | ✅ | **ViT (20 ep)**: s42 79.14 vs Base 78.98, s7 78.00 vs Base 76.04; 33.8 ms vs 50.8 ms |
 | C6 | **Rent an RTX A5000** (real speed + real Docker GPU test) | ⬜ | Monday, after the Docker image works |
 
 ## D. Docker / reproducibility (mandatory)
@@ -59,7 +59,7 @@ The model is chosen by **total points**, from measured numbers only.
 | D5 | Total run time within ~latency×n×3 | ⬜ | measure the full batch run in Docker |
 | D6 | Output format = example_submission.zip + passes evaluate.py | ✅ | checked 26 Sep |
 | D7 | Clean-machine test | ⬜ | teammate, Monday |
-| D8 | **Install WSL + Docker Desktop** on the laptop | ⬜ | needs a restart: only when the GPU is idle (Sat morning) |
+| D8 | **Install WSL + Docker Desktop** on the laptop | 🔄 | WSL + Ubuntu installed 26 Sep 09:50; Docker Desktop next |
 | D9 | Regenerate `submission/` from the final pipeline | ⬜ | current files are from the old Base+Small |
 
 ## E. Docs

@@ -1,0 +1,62 @@
+{
+  "_comment": "VALIDATION ONLY (seed-7 split): same settings as config.json, models trained WITHOUT the seed-7 validation cars. Never use for the submission.",
+  "mode": "fast",
+  "modes": {
+    "fast": {
+      "models": [
+        {
+          "name": "base",
+          "backbone": "convnext_base.dinov3_lvd1689m",
+          "file": "weights/val7_base_infer.pth",
+          "weight": 1.0
+        }
+      ],
+      "flip": false,
+      "refusal_threshold": 0.86,
+      "_threshold_source": "experiments/threshold_study.py, cos+gap signal, plateau centre on seeds 42 and 7 (fast Base model)"
+    },
+    "fast_vit": {
+      "models": [
+        {
+          "name": "vit",
+          "backbone": "vit_base_patch16_dinov3.lvd1689m",
+          "file": "weights/val7_vit_infer.pth",
+          "weight": 1.0
+        }
+      ],
+      "flip": false,
+      "refusal_threshold": null,
+      "_threshold_source": "candidate fast model (ViT alone, no flip): threshold not tuned yet"
+    },
+    "accurate": {
+      "models": [
+        {
+          "name": "base",
+          "backbone": "convnext_base.dinov3_lvd1689m",
+          "file": "weights/val7_base_infer.pth",
+          "weight": 0.5
+        },
+        {
+          "name": "vit",
+          "backbone": "vit_base_patch16_dinov3.lvd1689m",
+          "file": "weights/val7_vit_infer.pth",
+          "weight": 0.5
+        }
+      ],
+      "flip": true,
+      "refusal_threshold": null,
+      "_threshold_source": "NOT TUNED YET: run threshold_study on this mode before using it"
+    }
+  },
+  "decode": "pil",
+  "crop_long_side": 384,
+  "rerank": {
+    "enabled": true,
+    "k1": 6,
+    "k2": 2,
+    "lambda": 0.3,
+    "topk": 100
+  },
+  "batch_size": 32,
+  "decode_workers": 8
+}
