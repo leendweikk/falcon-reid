@@ -23,9 +23,9 @@ The model is chosen by **total points**, from measured numbers only.
 | A6 | ConvNeXt-Large (as a teacher only) | ⬜ low | 1-epoch fit test first; only if distillation works and time remains |
 | A7 | Letterbox input | ❌ | rectangular input already lost; low expected gain; no GPU time |
 | A8 | **Label cleaning** (train only) | ⬜ | ~45% of the worst failures look like label errors. Manual review (Leen, no GPU). Also good for the defense |
-| A9 | **VeRi + plate blurring** | ⬜ | allowed #46/#47; blur for #48 safety. GPU: only if distillation is done by Sat evening. Must pass the gate |
+| A9 | **VeRi + plate blurring** | 🔄 | prepare_veri.py (YOLO11 plate detector, pinned HF revision) → check runs/veri_blur_check.jpg by eye → queue_veri.ps1 (s42 + s7, ~2 h). PK sampling: +776 cars ≈ ×1.6 epoch time, not ×5 |
 | A10 | **Two-stage** (fast ViT top-100 → ensemble re-orders) | ✅ | **passes the gate**: s42 82.25 vs 79.36 (+2.89), s7 80.29 vs 78.15 (+2.15). Full ensemble 82.85/80.86. In falcon/ as mode `two_stage` (patch21). Allowed #28, not timed #31 |
-| A11 | **Distillation** ensemble → ViT (relational KD, tau 0.1, weight 1) | 🔄 | queue_distill.ps1 (patch23): teacher vectors + student on s42 and s7, fast-mode evals vs 79.14 / 78.00 |
+| A11 | Distillation ensemble → ViT (relational KD) | ❌ | fast mode s42 79.53 vs 79.14 (+0.39), s7 78.03 vs 78.00 (+0.03): below the +0.7 bar |
 | A12 | Re-tune re-ranking k1/k2/λ/top-K | ❌ | best grid point (k1=4,k2=2,λ=0.5): s42 +0.90 but s7 −0.12 → fails the gate; defaults k1=6,k2=2,λ=0.3 stay |
 | A13 | Gallery-side smoothing | ⬜ low | allowed #38; only if time |
 | A14 | Synthetic data (VehicleX) | ❌ | no time |

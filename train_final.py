@@ -36,7 +36,8 @@ torch.backends.cudnn.benchmark = True
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=BACKBONES, required=True)
-    ap.add_argument("--train-csv", default=str(ROOT / "data" / "train.csv"))
+    ap.add_argument("--train-csv", nargs="+", default=[str(ROOT / "data" / "train.csv")],
+                    help="one or more CSVs (e.g. our split + data/veri.csv)")
     ap.add_argument("--out", default=str(ROOT / "weights"))
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--lr-backbone", type=float, default=LR_BACKBONE)
@@ -60,7 +61,7 @@ def main():
     name = args.model if args.seed == 0 else f"{args.model}_seed{args.seed}"
 
     train_tf, _ = make_transforms((args.size, args.size))
-    ds = TrainSet(Path(args.train_csv), transform=train_tf, return_index=bool(args.distill))
+    ds = TrainSet([Path(p) for p in args.train_csv], transform=train_tf, return_index=bool(args.distill))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     teacher, kd_fn = None, None
     if args.distill:                                            # A11: relational distillation from the ensemble
