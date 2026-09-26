@@ -27,15 +27,18 @@ splits of `train.csv` (300 held-out cars each, never seen in training; details i
 | **0.7·F1 + 0.3·TNR** (10%), re-weighted to the closed test's 20% open-set | **0.967** | **0.967** |
 | PR-AUC of the confidence score (threshold-free) | 0.996 | 0.995 |
 
-| Speed of the timed `extract()` (organizers' protocol, answers #31–#34) | Laptop RTX 4050 | Google Colab T4 |
-|---|---|---|
-| Latency, batch 1, full cycle (read → decode → crop → forward → L2) | **27.2 ms** | 36.6 ms |
-| Best throughput (batch 1/8/16/32) | **135 FPS** | 47 FPS¹ |
-| Determinism (two runs, same input) | identical | identical |
-| Speed points by the official formula | **20 / 20** | 10 / 20¹ |
+| Speed of the timed `extract()` (organizers' protocol, answers #31–#34) | Laptop RTX 4050 | Laptop, **inside our Docker image**² | Google Colab T4 |
+|---|---|---|---|
+| Latency, batch 1, full cycle (read → decode → crop → forward → L2) | **27.2 ms** | 37.5 ms | 36.6 ms |
+| Best throughput (batch 1/8/16/32) | **135 FPS** | 105 FPS | 47 FPS¹ |
+| Determinism (two runs, same input) | identical | identical | identical |
+| Speed points by the official formula | **20 / 20** | **20 / 20** | 10 / 20¹ |
 
 ¹ Colab's free machine has only **2 CPU threads**, and throughput is bound by CPU JPEG decoding, not by the GPU
 (see [Speed](#speed)). The judges' machine (RTX A5000, 128 threads) is stronger on both sides.
+² Docker Desktop on Windows runs containers in a WSL2 virtual machine: GPU calls pass through a virtualization
+layer and the images are read from the Windows drive over a shared-folder bridge. The judges run Docker on native
+Linux with local disks, where neither overhead exists.
 
 | Other checks | Result |
 |---|---|
@@ -68,6 +71,8 @@ The same thing with Compose: put the dataset in `./data`, then `docker compose -
 ```bash
 docker compose up --build        # web page: http://localhost:8080   Swagger: http://localhost:8080/api/docs
 ```
+
+![Web demo: a search with the accepted match highlighted](docs/ui_search.png)
 
 Browser client (nginx) → FastAPI inference backend → PostgreSQL + pgvector. The demo gallery is loaded from
 `./data/test_gallery.csv` on first start. Upload a frame, draw the box around the car, get ranked candidates with
@@ -240,7 +245,8 @@ after 50 warm-up runs, CUDA-synchronized; throughput = best of batch 1/8/16/32, 
   the laptop alone gave +26% (107 → 135 FPS). Decoding therefore runs in a thread pool with one
   worker per CPU thread (`decode_workers: "auto"`, capped at 16). On the judges' 128-thread machine this gives
   16 parallel decoders.
-- **Latency stays under 40 ms even on the weaker Colab machine** (36.6 ms), and is 27.2 ms on the laptop.
+- **Latency stays under 40 ms even on the weaker Colab machine** (36.6 ms), and is 27.2 ms on the laptop
+  (37.5 ms / 105 FPS inside our Docker image on Windows, see note ² above — still 20/20, with a thinner margin).
 - Weights are stored in fp16 without the training-only classifier (`tools/export_weights.py`); inference uses fp16 autocast.
 - JPEG draft (reduced-size) decoding was tested: little gain (it only triggers for boxes ≥ 768 px), so it is not used.
 - Stage 2 and re-ranking are outside the timed function (#31) but inside the whole-run limit (#40):

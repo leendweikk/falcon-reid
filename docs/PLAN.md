@@ -79,7 +79,7 @@ The model is chosen by **total points**, from measured numbers only.
 |---|---|---|---|
 | F1 | Backend (FastAPI) + pgvector + web client + Swagger + compose | ✅ written, 🔄 testing | patch18; service == batch 14/14 |
 | F2 | Leen's Windows test (dev_server, CPU) | ⬜ | |
-| F3 | Docker test of the full compose | ⬜ | after D8 |
+| F3 | Docker test of the full compose | ✅ | 26 Sep: `docker compose up --build` → db healthy, 750 gallery cars imported (both stages), API on cuda; web search of query 486dd80d… returns df7ea501… with confidence 1.2887 = batch candidates.csv (1.288641) |
 | F4 | **Hosted prototype link** (ТЗ §13) | ⬜ ⚠️ | decide where to host; how long it must stay online is unanswered |
 | F5 | 10^6-gallery ANN demo (HNSW) | ⬜ | tie-breaker |
 | F6 | Grad-CAM in the UI | ⬜ low | tie-breaker |
@@ -116,7 +116,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
 | I4 | GitHub Release weights-v1 (base_infer + vit_infer + LICENSE_DINOv3.md) + real sha256/bytes in manifest | #39, ТЗ §9 reproducibility | ✅ | release published 26 Sep; verified from a fresh clone on a clean machine: both downloads pass sha256, both stages load offline (768-d / 1792-d) |
 | I5 | torch 2.14.0+cu126 wheel exists for cp311 linux | D2 | ✅ | checked on download.pytorch.org 26 Sep |
 | I6 | Real Docker build from a fresh clone + offline run (`--network none`) + no OOM | ТЗ §6–§8, #39–#41 | ✅ | 26 Sep laptop (Docker Desktop, RTX 4050): build 657 s, all checks pass; offline GPU run TOTAL 98.1 s, answered 991/1110. vs laptop run: top-1 identical 100%, full top-10 rows identical 98.6% (the rest = near-ties swapped by fp16 math of a different CUDA build), embeddings min cosine 0.999999, same answered set → reproduced. Say this in the README |
-| I7 | Speed + determinism on more than one machine | #30–#34, #31 | ✅ | **Colab T4 (2 CPU threads, driver 580, torch cu126, released weights): 36.6 ms → 10/10 latency; 47 FPS = CPU-decode bound; determinism 0.0.** Laptop after patch33 (12 decode workers): **27.2 ms, 135 FPS → 20/20; determinism 0.0**. Full run 86.5 s vs limit ≈ 27.2 × 1860 × 3 ≈ 152 s (57%). Not measured (no budget): the exact A5000 + driver 12.2 and the judges' CPU-thread limit → README explains that FPS grows with CPU threads. All rows in docs/speed_log_falcon.csv |
+| I7 | Speed + determinism on more than one machine | #30–#34, #31 | ✅ | **Colab T4 (2 CPU threads, driver 580, torch cu126, released weights): 36.6 ms → 10/10 latency; 47 FPS = CPU-decode bound; determinism 0.0.** Laptop after patch33 (12 decode workers): **27.2 ms, 135 FPS → 20/20; determinism 0.0**. Full run 86.5 s vs limit ≈ 27.2 × 1860 × 3 ≈ 152 s (57%). Not measured (no budget): the exact A5000 + driver 12.2 and the judges' CPU-thread limit → README explains that FPS grows with CPU threads. All rows in docs/speed_log_falcon.csv · **inside the Docker image on the laptop (Docker Desktop/WSL2): 37.5 ms, 105 FPS → 20/20** (WSL2 GPU + Windows-drive overhead; judges = native Linux) |
 | I8 | Live build demo on request | ТЗ §6 «продемонстрировать процесс сборки … в реальном времени» | ⬜ | rehearse once; note build time |
 | I9 | DINOv3 pretrained weights: exact source (timm/HF id + revision) and licence notice for our released fine-tuned weights | #39, #46 | ✅ | README + release notes |
 | I10 | README states: embeddings.npy = stage-1 ViT vectors, submission.csv = two-stage order (why they differ) + re-ranking described | #12, #28 | ✅ | part of E1 |
