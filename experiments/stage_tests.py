@@ -12,6 +12,9 @@ Each query is handled alone against the gallery (answer #38). Vectors are cached
 
   python experiments/stage_tests.py --config falcon/config_val42.json --splits data/splits
   python experiments/stage_tests.py --config falcon/config_val7.json  --splits data/splits_seed7
+  VeRi check (A9): same test with the VeRi-trained ViT in both stages:
+  python experiments/stage_tests.py --config falcon/config_val42_veri.json --splits data/splits        --tag veri
+  python experiments/stage_tests.py --config falcon/config_val7_veri.json  --splits data/splits_seed7  --tag veri
 Keep rules: a change is adopted only if it wins by >= 0.7 on seed 42 AND still wins on seed 7.
 """
 import sys
@@ -68,10 +71,12 @@ def main():
     ap.add_argument("--images", default=str(ROOT / "data" / "images"))
     ap.add_argument("--fast-mode", default="fast_vit")
     ap.add_argument("--heavy-mode", default="accurate")
+    ap.add_argument("--tag", default="", help="suffix for the cache/result files, so a test with other weights "
+                                              "(e.g. --tag veri) never reuses the vectors of an earlier run")
     args = ap.parse_args()
 
     splits = ROOT / args.splits
-    name = Path(args.splits).name
+    name = Path(args.splits).name + (f"_{args.tag}" if args.tag else "")
     cache = ROOT / "runs" / f"stage_cache_{name}.npz"
     query, gallery = official.load_gt(splits / "val_gt.csv")
     q_df = pd.read_csv(splits / "val_query.csv", dtype={"image_id": str})
