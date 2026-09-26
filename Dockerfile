@@ -36,10 +36,11 @@ COPY tools/fetch_weights.py tools/export_weights.py tools/
 COPY weights/ weights/
 RUN python tools/fetch_weights.py
 
-# 4) self-test at build time: both modes load fully offline and produce vectors of the right size
+# 4) self-test at build time: the two shipped stages (fast ViT = stage 1, Base+ViT = stage 2) load fully
+#    offline and produce vectors of the right size
 RUN python -c "import numpy as np; from PIL import Image; from falcon import Extractor; \
 img = Image.fromarray((np.random.rand(480, 640, 3) * 255).astype('uint8')); \
-[print(m, Extractor(mode=m, device='cpu').extract(img, (10, 10, 300, 200)).shape) for m in ('fast', 'accurate')]"
+[print(m, Extractor(mode=m, device='cpu').extract(img, (10, 10, 300, 200)).shape) for m in ('fast_vit', 'accurate')]"
 
 ENTRYPOINT ["python", "-m", "falcon.predict"]
 CMD ["--images", "/data/images", "--query", "/data/test_query.csv", "--gallery", "/data/test_gallery.csv", "--out", "/out"]

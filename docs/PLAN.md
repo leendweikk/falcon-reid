@@ -6,7 +6,7 @@ Rule: every patch updates this file. Status: ✅ done · 🔄 in progress · ⬜
 Sources merged here: HANDOFF.md §11, the two outside reviews (26 Sep 01:17), the ТЗ, the official answers (#N), Leen's requests.
 
 ## Scoring reminder (decides every choice)
-45% mAP@10 · 20% speed (≤40 ms incl. decode, ≥100 FPS, on RTX A5000) · 15% engineering · 10% refusal (0.7·F1+0.3·TNR) · 10% defense.
+45% mAP@10 · 20% speed (≤40 ms incl. decode, ≥100 FPS, on RTX A5000) · 15% engineering (reproducibility, Docker, architecture, docs — the web service is optional, #41) · 10% refusal (0.7·F1+0.3·TNR) · 10% defense.
 The model is chosen by **total points**, from measured numbers only.
 
 ---
@@ -29,14 +29,14 @@ The model is chosen by **total points**, from measured numbers only.
 | A12 | Re-tune re-ranking k1/k2/λ/top-K | ❌ | best grid point (k1=4,k2=2,λ=0.5): s42 +0.90 but s7 −0.12 → fails the gate; defaults k1=6,k2=2,λ=0.3 stay |
 | A13 | Gallery-side smoothing | ⬜ low | allowed #38; only if time |
 | A14 | Synthetic data (VehicleX) | ❌ | no time |
-| A15 | Plate-masking self-test (paint the plate area, check the mAP drop) | 🔄 | experiments/plate_mask_test.py (patch26, tested on fake data): `prepare` on CPU (paints plates gray in the val crops of both splits) → `eval` after training. **VeRi rule: with plates painted, the VeRi ViT must still beat the current ViT on both splits.** Also evidence for #48 in the defense |
+| A15 | Plate-masking self-test (paint the plate area, check the mAP drop) | 🔄 | experiments/plate_mask_test.py (patch26). `prepare` done 26 Sep: plate found and painted in **2,124 / 3,471 val photos (61.2%)**; check sheet reviewed: boxes sit on plates, no badges/stickers/grilles painted; misses = some visible blurred plates (so the test is conservative). `eval` after the VeRi queue. Main use now: the drop of the CURRENT ViT = evidence for #48 in the defense |
 
 ## B. Refusal (10%)
 | # | Item | Status | Notes |
 |---|---|---|---|
 | B1–B3 | objective, 20% strangers, cos+gap signal | ✅ | |
 | B3b | cos+gap in the real code | ✅ | falcon/search.py; validation 0.9569 (patch16) |
-| B4 | **Re-tune the threshold for the FINAL pipeline** | 🔄 | two_stage (Base flip+ViT flip): **0.809** from plateau overlap 0.779–0.839; score 0.9669 on both splits (fast Base had 0.957/0.962). Re-run if stage 2 changes |
+| B4 | **Re-tune the threshold for the FINAL pipeline** | ✅ | two_stage (Base flip+ViT flip): **0.809** from plateau overlap 0.779–0.839; score 0.9669 on both splits. **In falcon/config.json since patch28.** Re-run if any model or stage 2 changes |
 | B5 | README justification (plateau on 2 splits) | ⬜ | |
 
 ## C. Speed (20%)
@@ -47,7 +47,7 @@ The model is chosen by **total points**, from measured numbers only.
 | C3 | fp16 weights / channels_last / torch.compile | ⬜ low | same condition as C2 |
 | C4 | Slim fp16 weights without classifier | ✅ | tools/export_weights.py (cosine ≥ 0.99999) |
 | C5 | Choose the fast model by speed × accuracy | ✅ | **ViT (20 ep)**: s42 79.14 vs Base 78.98, s7 78.00 vs Base 76.04; 33.8 ms vs 50.8 ms |
-| C6 | **Rent an RTX A5000** (real speed + real Docker GPU test) | ⬜ | Monday. Pick a machine with **driver 12.2 (R535)** like the judges' (#32) |
+| C6 | **Rent an RTX A5000** (real speed + real Docker GPU test) | ⬜ ⚠️ | **Moved BEFORE the Sunday freeze**: it is the only measurement that could still change the model choice (40 ms bar, whole-run limit ≈ latency×n×3, #40). Speed test = any A5000 pod; Docker GPU test needs a full VM. Pick driver 12.2 (R535) like the judges' (#32) |
 
 ## D. Docker / reproducibility (mandatory)
 | # | Item | Status | Notes |
@@ -72,7 +72,7 @@ The model is chosen by **total points**, from measured numbers only.
 | E5 | Limitations section | ⬜ | |
 | E6 | Research sources list (Leen's docx + ours) | ⬜ | goes into the README references |
 
-## F. Service (engineering 15% + tie-breakers)
+## F. Service — OPTIONAL (answers #41, #43, #44: tie-breaker only, NOT in the main 90%; engineering 15% = inference pipeline, Docker, docs)
 | # | Item | Status | Notes |
 |---|---|---|---|
 | F1 | Backend (FastAPI) + pgvector + web client + Swagger + compose | ✅ written, 🔄 testing | patch18; service == batch 14/14 |
@@ -82,7 +82,7 @@ The model is chosen by **total points**, from measured numbers only.
 | F5 | 10^6-gallery ANN demo (HNSW) | ⬜ | tie-breaker |
 | F6 | Grad-CAM in the UI | ⬜ low | tie-breaker |
 | F7 | API_CONTRACT without plate_number | ✅ | patch18 |
-| F8 | Service uses the SAME pipeline as the submission (two-stage) | ⬜ | before switching config "mode" to two_stage |
+| F8 | Service uses the SAME pipeline as the submission (two-stage) | ✅ | patch28: shared `falcon.search.order_candidates`; pgvector stores the stage-2 vector per row; tested in the sandbox with random weights: service == batch 10/10, mode-change guard works. Old gallery DBs must be reset once (`docker compose down -v`, or delete runs/pgdev) |
 | D10 | Test the judges' driver 12.2 before Monday (Leen's own laptop if it has an NVIDIA GPU: driver 536.xx) | ⬜ | waiting for Leen's GPU check |
 
 ## G. Presentation (defense 10%)

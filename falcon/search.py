@@ -10,8 +10,9 @@ For a single query:
      0.7*F1 + 0.3*TNR (answer #15).
 Nothing here ever looks at another query.
 
-rank_candidates() is shared by the batch run (Gallery, in memory) and the web service
-(candidates come from the pgvector database), so both give identical answers.
+order_candidates() (steps 2-3, plus the optional two-stage re-ordering) is shared by the batch run
+(Gallery, in memory) and the web service (candidates come from the pgvector database), so both give
+identical answers.
 """
 import numpy as np
 
@@ -33,6 +34,24 @@ def rank_candidates(q, cand_vecs, cand_cos, k1=6, k2=2, lam=0.3, rerank=True):
     return order, float(cand_cos[top] + gap)
 
 
+def order_candidates(q, cand_vecs, cand_cos, q_rescore=None, cand_rescore=None,
+                     k1=6, k2=2, lam=0.3, rerank=True):
+    """Order ONE query's cosine top-K candidates (sorted by fast cosine, best first).
+    Single stage: k-reciprocal re-ranking of the fast vectors.
+    Two-stage (answer #28): the heavier rescore vectors (q_rescore, cand_rescore) re-order ONLY these
+    candidates, and re-ranking + the refusal signal are computed from them.
+    Returns (order into the candidates, cos+gap confidence, the cosines shown to the user)."""
+    if cand_rescore is None:
+        order, conf = rank_candidates(q, cand_vecs, cand_cos, k1, k2, lam, rerank)
+        return order, conf, cand_cos
+    q2 = _unit(q_rescore[None])[0]
+    g2 = _unit(cand_rescore)
+    c2 = g2 @ q2
+    pre = np.argsort(-c2, kind="stable")                       # rank_candidates expects cosine order
+    order, conf = rank_candidates(q2, g2[pre], c2[pre], k1, k2, lam, rerank)
+    return pre[order], conf, c2
+
+
 class Gallery:
     """In-memory gallery for the batch run.
 
@@ -52,15 +71,9 @@ class Gallery:
         q = _unit(q[None])[0]
         cos = self.g @ q                                           # (G,)
         cand = np.argsort(-cos, kind="stable")[:max(min(self.topk, len(cos)), min(n, len(cos)))]
-        if self.g2 is None:
-            q2, g2, c2 = q, self.g[cand], cos[cand]
-        else:                                                      # stage 2: re-order the candidates
-            q2 = _unit(q_rescore[None])[0]
-            c2 = self.g2[cand] @ q2
-            pre = np.argsort(-c2, kind="stable")                   # rank_candidates expects cosine order
-            cand, c2 = cand[pre], c2[pre]
-            g2 = self.g2[cand]
-        order, conf = rank_candidates(q2, g2, c2, self.k1, self.k2, self.lam, self.rerank)
+        order, conf, _ = order_candidates(q, self.g[cand], cos[cand], q_rescore,
+                                          None if self.g2 is None else self.g2[cand],
+                                          self.k1, self.k2, self.lam, self.rerank)
         ranked = cand[order][:n]
         return ranked, int(ranked[0]), conf
 

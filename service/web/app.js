@@ -112,7 +112,7 @@ function showResult(r) {
     v.className = "verdict ok";
     v.textContent = `Найдено совпадение: ${r.top_match} (уверенность ${r.confidence} ≥ порога ${r.threshold})`;
   }
-  $("timing").textContent = `формирование признака ${r.extract_ms} мс · поиск + переранжирование ${r.search_ms} мс · галерея ${r.gallery_size} ТС`;
+  $("timing").textContent = `формирование признака ${r.extract_ms} мс` + (r.rescore_ms ? ` · второй этап (ансамбль) ${r.rescore_ms} мс` : "") + ` · поиск + переранжирование ${r.search_ms} мс · галерея ${r.gallery_size} ТС`;
   const grid = $("results");
   grid.className = "grid" + (r.refused ? " results-refused" : "");
   grid.innerHTML = "";

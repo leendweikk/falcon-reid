@@ -3,7 +3,8 @@ Falcon ReID — inference backend (FastAPI). Interactive OpenAPI docs: /api/docs
 
 Microservices (ТЗ §6): this API (inference) | PostgreSQL + pgvector (gallery vectors + metadata) |
 nginx web client (static page in the browser). The search logic is the same code as the batch run
-(falcon.extractor + falcon.search.rank_candidates), so the demo gives the same answers as submission.csv.
+(falcon.extractor + falcon.search.order_candidates, including the two-stage re-ordering), so the demo
+gives the same answers as submission.csv.
 
 Input is always an image + the vehicle bbox (answer #45: no detection in this task).
 Each request is one query processed on its own (stream protocol, answer #38).
@@ -26,7 +27,7 @@ from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
 from falcon.extractor import Extractor, crop_vehicle, load_config, open_image
-from falcon.search import rank_candidates
+from falcon.search import order_candidates
 
 from .db import GalleryDB
 
@@ -47,7 +48,7 @@ def _jpeg(img):
 
 def import_gallery(csv_path, images_dir, batch=32):
     """Bulk-load a gallery from a CSV (image_id,x,y,w,h[,camera]) + folder of full frames."""
-    ex, db = state["extractor"], state["db"]
+    ex, ex2, db = state["extractor"], state["extractor2"], state["db"]
     df = pd.read_csv(csv_path, dtype={"image_id": str})
     files = {p.stem: p for p in Path(images_dir).iterdir()}
     for i in range(0, len(df), batch):
@@ -55,10 +56,11 @@ def import_gallery(csv_path, images_dir, batch=32):
         items = [(files[r.image_id], (r.x, r.y, r.w, r.h)) for r in rows]
         with state["lock"]:
             vecs = ex.extract_batch(items)
-        for r, (path, box), v in zip(rows, items, vecs):
+            vecs2 = ex2.extract_batch(items) if ex2 else [None] * len(items)
+        for r, (path, box), v, v2 in zip(rows, items, vecs, vecs2):
             crop = crop_vehicle(open_image(path), box, ex.long_side)
             db.add(r.image_id, v, _jpeg(crop), camera=str(getattr(r, "camera", "") or "") or None,
-                   source=Path(csv_path).name)
+                   source=Path(csv_path).name, rescore=v2)
     return len(df)
 
 
@@ -69,9 +71,13 @@ async def lifespan(app):
     threshold = cfg["modes"][mode]["refusal_threshold"]
     if threshold is None:
         raise RuntimeError(f"mode '{mode}' has no tuned refusal threshold in falcon/config.json")
+    spec = cfg["modes"][mode]
     ex = Extractor(cfg, mode=mode, device=DEVICE)
-    state.update(cfg=cfg, mode=mode, threshold=float(threshold), extractor=ex, lock=threading.Lock(),
-                 db=GalleryDB(ex.dim), rerank=cfg["rerank"])
+    # two-stage (answer #28): the heavier ensemble re-orders the fast top-K, same as falcon.predict
+    ex2 = Extractor(cfg, mode=spec["rescore_mode"], device=DEVICE) if spec.get("rescore_mode") else None
+    state.update(cfg=cfg, mode=mode, threshold=float(threshold), extractor=ex, extractor2=ex2,
+                 lock=threading.Lock(), db=GalleryDB(ex.dim, rescore_dim=ex2.dim if ex2 else None),
+                 rerank=cfg["rerank"], topk=spec.get("rescore_topk", cfg["rerank"]["topk"]))
     if IMPORT_CSV and IMPORT_IMAGES and state["db"].count() == 0:
         n = import_gallery(IMPORT_CSV, IMPORT_IMAGES)
         print(f"imported {n} gallery vehicles from {IMPORT_CSV}")
@@ -93,7 +99,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 class Match(BaseModel):
     rank: int
     gallery_id: str
-    similarity: float = Field(description="cosine similarity of the vectors (1 = identical)")
+    similarity: float = Field(description="cosine similarity of the vectors used for the final order "
+                                          "(stage 2 in two-stage mode; 1 = identical)")
     camera: str | None = None
     label: str | None = None
     image_url: str
@@ -106,7 +113,8 @@ class SearchResult(BaseModel):
     threshold: float
     top_match: str | None = Field(description="gallery_id of the accepted match, null when refused")
     results: list[Match] = Field(description="ranked candidates (shown even when refused, for the operator)")
-    extract_ms: float
+    extract_ms: float = Field(description="stage 1 feature (the timed extract(): decode, crop, forward)")
+    rescore_ms: float = Field(0.0, description="stage 2 features for the re-ordering (two-stage mode only)")
     search_ms: float
     gallery_size: int
 
@@ -115,6 +123,7 @@ class Health(BaseModel):
     status: str
     mode: str
     models: list[str]
+    rescore_models: list[str] = Field(default_factory=list, description="stage 2 (two-stage mode only)")
     embedding_dim: int
     device: str
     threshold: float
@@ -158,8 +167,10 @@ async def _read_vehicle(file: UploadFile, x: int, y: int, w: int, h: int):
 # ------------------------------------------------------------------ endpoints
 @app.get("/api/health", response_model=Health, tags=["service"])
 def health():
-    ex = state["extractor"]
-    return Health(status="ok", mode=state["mode"], models=[m["name"] for m in state["cfg"]["modes"][state["mode"]]["models"]],
+    ex, spec = state["extractor"], state["cfg"]["modes"][state["mode"]]
+    resc = spec.get("rescore_mode")
+    return Health(status="ok", mode=state["mode"], models=[m["name"] for m in spec["models"]],
+                  rescore_models=[m["name"] for m in state["cfg"]["modes"][resc]["models"]] if resc else [],
                   embedding_dim=ex.dim, device=str(ex.device), threshold=state["threshold"],
                   gallery_size=state["db"].count())
 
@@ -171,26 +182,29 @@ async def search(file: UploadFile = File(..., description="full camera frame (JP
                  w: int = Form(..., description="bbox width"), h: int = Form(..., description="bbox height"),
                  top_k: int = Form(10, ge=1, le=100, description="how many candidates to return")):
     data, _ = await _read_vehicle(file, x, y, w, h)
-    ex, db, rr = state["extractor"], state["db"], state["rerank"]
+    ex, ex2, db, rr = state["extractor"], state["extractor2"], state["db"], state["rerank"]
     t0 = time.perf_counter()
     with state["lock"]:
         q = ex.extract(data, (x, y, w, h))
-    t1 = time.perf_counter()
+        t1 = time.perf_counter()
+        q2 = ex2.extract(data, (x, y, w, h)) if ex2 else None       # stage 2 (not timed by the organizers, #31)
+    t2 = time.perf_counter()
     size = db.count()
     if size == 0:
         raise HTTPException(409, "the gallery is empty: add vehicles first (POST /api/gallery)")
-    k = max(min(rr["topk"], size), top_k)
-    ids, vecs, cos, meta = db.nearest(q, k, exact=size <= EXACT_BELOW)
-    order, conf = rank_candidates(q, vecs, cos, rr["k1"], rr["k2"], rr["lambda"], rr["enabled"])
-    t2 = time.perf_counter()
+    k = max(min(state["topk"], size), top_k)
+    ids, vecs, cos, meta, resc = db.nearest(q, k, exact=size <= EXACT_BELOW)
+    order, conf, shown = order_candidates(q, vecs, cos, q2, resc, rr["k1"], rr["k2"], rr["lambda"], rr["enabled"])
+    t3 = time.perf_counter()
     refused = conf < state["threshold"]
-    results = [Match(rank=i + 1, gallery_id=ids[j], similarity=round(float(cos[j]), 4),
+    results = [Match(rank=i + 1, gallery_id=ids[j], similarity=round(float(shown[j]), 4),
                      camera=meta[ids[j]]["camera"], label=meta[ids[j]]["label"],
                      image_url=f"/api/gallery/{ids[j]}/image") for i, j in enumerate(order[:top_k])]
     return SearchResult(search_id=uuid.uuid4().hex, refused=refused, confidence=round(conf, 4),
                         threshold=state["threshold"], top_match=None if refused else results[0].gallery_id,
                         results=results, extract_ms=round(1000 * (t1 - t0), 1),
-                        search_ms=round(1000 * (t2 - t1), 1), gallery_size=size)
+                        rescore_ms=round(1000 * (t2 - t1), 1), search_ms=round(1000 * (t3 - t2), 1),
+                        gallery_size=size)
 
 
 @app.post("/api/gallery", response_model=Added, tags=["gallery"], summary="Add a known vehicle to the gallery")
@@ -199,11 +213,12 @@ async def add_to_gallery(file: UploadFile = File(...), x: int = Form(...), y: in
                          gallery_id: str | None = Form(None, description="default: a new random id"),
                          camera: str | None = Form(None), label: str | None = Form(None)):
     data, img = await _read_vehicle(file, x, y, w, h)
-    ex = state["extractor"]
+    ex, ex2 = state["extractor"], state["extractor2"]
     with state["lock"]:
         v = ex.extract(data, (x, y, w, h))
+        v2 = ex2.extract(data, (x, y, w, h)) if ex2 else None
     gid = gallery_id or uuid.uuid4().hex
-    state["db"].add(gid, v, _jpeg(crop_vehicle(img, (x, y, w, h), ex.long_side)), camera, label)
+    state["db"].add(gid, v, _jpeg(crop_vehicle(img, (x, y, w, h), ex.long_side)), camera, label, rescore=v2)
     return Added(gallery_id=gid, added=True)
 
 

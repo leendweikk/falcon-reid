@@ -1,6 +1,6 @@
 {
   "_comment": "Inference settings. 'mode' picks one entry of 'modes'. Every number here is justified in README / docs/EXPERIMENTS.md.",
-  "mode": "fast",
+  "mode": "two_stage",
   "modes": {
     "fast": {
       "models": [
@@ -40,9 +40,9 @@
       "flip": false,
       "rescore_mode": "accurate",
       "rescore_topk": 100,
-      "refusal_threshold": null,
+      "refusal_threshold": 0.809,
       "_comment": "stage 1 = fast ViT (the timed extract(), its vectors go to embeddings.npy); stage 2 = Base+ViT ensemble with flip re-orders the ViT top-100 (answer #28, not timed #31). Val: +2.89 (s42) / +2.15 (s7) vs fast ViT",
-      "_threshold_source": "NOT TUNED YET: tools/tune_threshold.py on both splits"
+      "_threshold_source": "tools/tune_threshold.py on BOTH validation splits, official objective 0.7*F1 + 0.3*TNR (answer #15) with 20% open-set queries (answer #17), cos+gap signal: plateau overlap 0.779-0.839 -> middle 0.809; score 0.9669 on seeds 42 and 7. Re-tune if any model or the pipeline changes"
     },
     "accurate": {
       "models": [
