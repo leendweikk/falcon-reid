@@ -1,33 +1,33 @@
-queries scored: 932 | mAP@10 0.7893 | Rank-1 0.7393 | Rank-5 0.9217
-failures (correct car not in top-5): 73 (7.8%)
+queries scored: 932 | mAP@10 0.8225 | Rank-1 0.7811 | Rank-5 0.9399
+failures (correct car not in top-5): 56 (6.0%)
 
 --- by box size (pixels) ---
                 mAP  fail_rate  range_min  range_max
 box_area                                            
-Q1 (lowest)   0.819      0.047      48600     250233
-Q2            0.761      0.107     250242     335778
-Q3            0.765      0.116     335790     443170
-Q4 (highest)  0.811      0.043     444854    1062271
+Q1 (lowest)   0.850      0.039      48600     250233
+Q2            0.807      0.069     250242     335778
+Q3            0.799      0.094     335790     443170
+Q4 (highest)  0.834      0.039     444854    1062271
 
 --- by brightness (0 dark - 255 bright) ---
                 mAP  fail_rate  range_min  range_max
 brightness                                          
-Q1 (lowest)   0.725      0.086     16.864     79.741
-Q2            0.801      0.073     79.837    101.942
-Q3            0.822      0.077    101.977    124.234
-Q4 (highest)  0.810      0.077    124.411    177.345
+Q1 (lowest)   0.764      0.082     16.864     79.741
+Q2            0.810      0.064     79.837    101.942
+Q3            0.856      0.039    101.977    124.234
+Q4 (highest)  0.860      0.056    124.411    177.345
 
 --- by number of correct gallery photos ---
              queries    mAP
 n_positives                
-1                569  0.815
-2                262  0.724
-3                 72  0.839
-4                 16  0.842
-5                 12  0.689
-6                  1  0.167
+1                569  0.848
+2                262  0.757
+3                 72  0.879
+4                 16  0.883
+5                 12  0.673
+6                  1  0.103
 
 --- why failures happen ---
-in 96% of failures, a WRONG car looks more similar than the best TRUE match (lookalike problem)
-median similarity in failures: best true 0.427 vs best wrong 0.580
-median similarity in successes: best true 0.686
+in 91% of failures, a WRONG car looks more similar than the best TRUE match (lookalike problem)
+median similarity in failures: best true 0.276 vs best wrong 0.425
+median similarity in successes: best true 0.571
