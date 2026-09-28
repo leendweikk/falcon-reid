@@ -1,0 +1,247 @@
+From 2158c823cc5875d2e0e07228688a83d38757c3aa Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 26 Sep 2026 18:07:13 +0300
+Subject: [PATCH] Tidy the repo root: legacy scripts (old run_inference
+ pipeline, old benchmark, soup, old threshold tools) -> experiments/legacy,
+ PowerShell queues -> experiments/queues; one inference entry point
+ (falcon.predict); PLAN
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AFVjXga28eWky1MBmzDgBX
+---
+ docs/PLAN.md                                               | 4 ++--
+ experiments/README.md                                      | 5 +++++
+ benchmark.py => experiments/legacy/benchmark.py            | 7 +++++--
+ docs/benchmark.md => experiments/legacy/benchmark_old.md   | 2 ++
+ .../legacy/check_threshold_transfer.py                     | 5 ++++-
+ run_inference.py => experiments/legacy/run_inference.py    | 5 ++++-
+ sanity_check.py => experiments/legacy/sanity_check.py      | 3 +++
+ soup.py => experiments/legacy/soup.py                      | 3 +++
+ .../legacy/tune_pipeline_threshold.py                      | 5 ++++-
+ queue.ps1 => experiments/queues/queue.ps1                  | 0
+ queue_distill.ps1 => experiments/queues/queue_distill.ps1  | 0
+ queue_night.ps1 => experiments/queues/queue_night.ps1      | 0
+ queue_veri.ps1 => experiments/queues/queue_veri.ps1        | 0
+ 13 files changed, 32 insertions(+), 7 deletions(-)
+ rename benchmark.py => experiments/legacy/benchmark.py (95%)
+ rename docs/benchmark.md => experiments/legacy/benchmark_old.md (92%)
+ rename check_threshold_transfer.py => experiments/legacy/check_threshold_transfer.py (85%)
+ rename run_inference.py => experiments/legacy/run_inference.py (96%)
+ rename sanity_check.py => experiments/legacy/sanity_check.py (79%)
+ rename soup.py => experiments/legacy/soup.py (74%)
+ rename tune_pipeline_threshold.py => experiments/legacy/tune_pipeline_threshold.py (83%)
+ rename queue.ps1 => experiments/queues/queue.ps1 (100%)
+ rename queue_distill.ps1 => experiments/queues/queue_distill.ps1 (100%)
+ rename queue_night.ps1 => experiments/queues/queue_night.ps1 (100%)
+ rename queue_veri.ps1 => experiments/queues/queue_veri.ps1 (100%)
+
+diff --git a/docs/PLAN.md b/docs/PLAN.md
+index 87dcec7..4f5c34b 100644
+--- a/docs/PLAN.md
++++ b/docs/PLAN.md
+@@ -99,7 +99,7 @@ The model is chosen by **total points**, from measured numbers only.
+ |---|---|---|---|
+ | H1 | Teammate: presentation in her own Claude chat (English content; template slides 7–11 keep their Russian labels), diagrams, UI screenshots, Monday clean-machine test | 🔄 | brief + prompt sent 26 Sep; all technical claims come from Leen/this chat; numbers = XX until the freeze |
+ | H2 | Organizer questions: upload contents, prototype online duration | 🔄 | sent 26 Sep; moderator passed them to the mentor |
+-| H3 | Repo cleanup: loose scripts into folders, old .patch files, stray data.py, queue scripts | ⬜ | |
++| H3 | Repo cleanup | ✅ | 26 Sep: local patches + stray data.py deleted; HANDOFF.md and experiments/posthoc.py removed (patch36); old entry points (run_inference.py, benchmark.py, soup.py, old threshold scripts) → experiments/legacy/, queues → experiments/queues/, old docs/benchmark.md → experiments/legacy/benchmark_old.md (patch37). Root now holds only the submission, training and analysis entry points |
+ | H4 | Back up the new weights (Drive) | ⬜ | after the final models exist |
+ | H5a | Deep research (competition methods, VeRi, decoding, recipe) | ✅ | 26 Sep: 2026 DINOv3 vehicle re-ID paper (256 px, one strong backbone + re-rank, big batch 512), AI City 2021 winners; only untested lever = bigger batch (C7) |
+ 
+@@ -126,7 +126,7 @@ sheet, read 26 Sep), Telegram (slides 7–11 rule, deadline), both outside revie
+ | I14 | Error analysis on the held-out val split with real examples; back the "label errors" claim with example pairs (or drop the %) | ТЗ §9–§11, #50 | ✅ | = E3 + A8 (time-boxed) |
+ | I15 | Remove HANDOFF.md (personal/informal) from the public repo before submission; PLAN.md → keep as dev log or move out | public repo | ✅ | before links go up |
+ | I16 | Quarantine/remove forbidden reference code: experiments/posthoc.py "ALL QUERIES [FORBIDDEN]" re-rank | #40 (source code is checked) | ✅ | cleanup (H3) |
+-| I17 | Commit docs/speed_log_falcon.csv (speed evidence); delete stray root data.py (check unused) + old .patch files | H3 | ⬜ | |
++| I17 | Commit docs/speed_log_falcon.csv (speed evidence); delete stray root data.py (check unused) + old .patch files | H3 | ✅ | |
+ | I18 | Hosted prototype: password-protected (do not publish organizers' images openly); online through the expert review (30 Sep–14 Oct) and the finals; CPU host is enough (~1.3 s/query two-stage) | ТЗ §13 | ⬜ | = F4 |
+ | I19 | Presentation content check: no "~90% ceiling" framing; include VeRi rejection, plate test, model-choice-by-points table, honest errors | ТЗ §11 | ⬜ | teammate + Leen |
+ | I20 | Submission links (repo, presentation PDF, prototype, docs) uploaded Monday evening; each opened logged-out to check | ТЗ §13, Telegram | ⬜ | |
+diff --git a/experiments/README.md b/experiments/README.md
+index 449f9df..f769a63 100644
+--- a/experiments/README.md
++++ b/experiments/README.md
+@@ -8,3 +8,8 @@ run by the Dockerfile. Every inference-time comparison here processes each query
+ Main ones: `stage_tests.py` (two-stage search), `ensemble_test.py`, `multisize_test.py`,
+ `threshold_study.py` (refusal signals), `plate_mask_test.py` (plate-masking self-test, answer #48),
+ `prepare_veri.py` (VeRi preparation — the VeRi experiment was rejected), `official_bench.py` (speed).
++
++- `legacy/` — superseded tools from the Base + Small era (the old `run_inference.py` pipeline, the old benchmark,
++  model soup, old threshold scripts). **The submission's only entry point is `python -m falcon.predict`.**
++- `queues/` — PowerShell queues that ran the validation experiments overnight on the Windows laptop
++  (run from the project root: `powershell -ExecutionPolicy Bypass -File experiments/queues/queue.ps1`).
+diff --git a/benchmark.py b/experiments/legacy/benchmark.py
+similarity index 95%
+rename from benchmark.py
+rename to experiments/legacy/benchmark.py
+index 108fbb8..b1f5892 100644
+--- a/benchmark.py
++++ b/experiments/legacy/benchmark.py
+@@ -9,6 +9,9 @@ for several pipeline options, on GPU (if present) and CPU.
+   python benchmark.py --no-cpu        # GPU only (CPU is slow to measure)
+ Results -> docs/benchmark.md
+ """
++import sys as _sys
++from pathlib import Path as _P
++_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
+ import argparse
+ import time
+ from pathlib import Path
+@@ -22,7 +25,7 @@ from reid.data import test_transform
+ from reid.model import ReIDModel
+ from reid.rerank import re_ranking_streaming
+ 
+-ROOT = Path(__file__).resolve().parent
++ROOT = Path(__file__).resolve().parents[2]
+ LONG_SIDE = 384
+ 
+ 
+@@ -125,7 +128,7 @@ def main():
+     print(f"re-ranking (top-100, gallery {len(g)}): {rerank_ms:.1f} ms per query")
+ 
+     df = pd.DataFrame(results)
+-    out = ROOT / "docs" / "benchmark.md"
++    out = ROOT / "experiments" / "legacy" / "benchmark_old.md"
+     out.parent.mkdir(exist_ok=True)
+     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none"
+     out.write_text(
+diff --git a/docs/benchmark.md b/experiments/legacy/benchmark_old.md
+similarity index 92%
+rename from docs/benchmark.md
+rename to experiments/legacy/benchmark_old.md
+index f84708c..16d0422 100644
+--- a/docs/benchmark.md
++++ b/experiments/legacy/benchmark_old.md
+@@ -1,3 +1,5 @@
++> **LEGACY** (Base + Small era, 24–25 Sep). Current speed numbers: `docs/speed_log_falcon.csv` and the README.
++
+ # Speed benchmark
+ 
+ Hardware: GPU = NVIDIA GeForce RTX 4050 Laptop GPU; CPU = 8 threads; torch 2.14.0+cu132
+diff --git a/check_threshold_transfer.py b/experiments/legacy/check_threshold_transfer.py
+similarity index 85%
+rename from check_threshold_transfer.py
+rename to experiments/legacy/check_threshold_transfer.py
+index 0aaca42..99c427f 100644
+--- a/check_threshold_transfer.py
++++ b/experiments/legacy/check_threshold_transfer.py
+@@ -2,13 +2,16 @@
+ Compares top-1 confidence distributions: validation (matched queries only) vs real test.
+   python check_threshold_transfer.py <val_pred_dir> <test_pred_dir> <val_threshold>
+ """
++import sys as _sys
++from pathlib import Path as _P
++_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
+ import sys
+ from pathlib import Path
+ 
+ import numpy as np
+ import pandas as pd
+ 
+-ROOT = Path(__file__).resolve().parent
++ROOT = Path(__file__).resolve().parents[2]
+ 
+ SPLITS = (ROOT / "data" / "splits")
+ val_dir, test_dir, val_thr = Path(sys.argv[1]), Path(sys.argv[2]), float(sys.argv[3])
+diff --git a/run_inference.py b/experiments/legacy/run_inference.py
+similarity index 96%
+rename from run_inference.py
+rename to experiments/legacy/run_inference.py
+index 985a3e7..67e1ac8 100644
+--- a/run_inference.py
++++ b/experiments/legacy/run_inference.py
+@@ -6,6 +6,9 @@ Batch inference: produces the three official files.
+ Works offline (backbones are built empty, then our trained weights are loaded),
+ on GPU if available, otherwise on CPU.
+ """
++import sys as _sys
++from pathlib import Path as _P
++_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
+ import argparse
+ import time
+ from pathlib import Path
+@@ -19,7 +22,7 @@ from reid.data import test_transform
+ from reid.model import ReIDModel
+ from reid.rerank import re_ranking_streaming
+ 
+-ROOT = Path(__file__).resolve().parent
++ROOT = Path(__file__).resolve().parents[2]
+ LONG_SIDE = 384        # identical to make_crops.py: crop by box, longer side -> 384, then 256x256
+ 
+ 
+diff --git a/sanity_check.py b/experiments/legacy/sanity_check.py
+similarity index 79%
+rename from sanity_check.py
+rename to experiments/legacy/sanity_check.py
+index 2871dfb..19aa6c8 100644
+--- a/sanity_check.py
++++ b/experiments/legacy/sanity_check.py
+@@ -2,6 +2,9 @@
+ Compares two pipeline outputs on the same test: how often do they pick the same top-1 / overlap in top-10?
+   python sanity_check.py <pred_dir_A> <pred_dir_B>
+ """
++import sys as _sys
++from pathlib import Path as _P
++_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
+ import sys
+ from pathlib import Path
+ 
+diff --git a/soup.py b/experiments/legacy/soup.py
+similarity index 74%
+rename from soup.py
+rename to experiments/legacy/soup.py
+index 6a9c2d7..8e93da3 100644
+--- a/soup.py
++++ b/experiments/legacy/soup.py
+@@ -2,6 +2,9 @@
+ Model soup: average the weights of several models trained from the same starting point.
+   python soup.py <output.pth> <model1.pth> <model2.pth> ...
+ """
++import sys as _sys
++from pathlib import Path as _P
++_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
+ import sys
+ 
+ import torch
+diff --git a/tune_pipeline_threshold.py b/experiments/legacy/tune_pipeline_threshold.py
+similarity index 83%
+rename from tune_pipeline_threshold.py
+rename to experiments/legacy/tune_pipeline_threshold.py
+index bf203e4..a58226a 100644
+--- a/tune_pipeline_threshold.py
++++ b/experiments/legacy/tune_pipeline_threshold.py
+@@ -1,3 +1,6 @@
++import sys as _sys
++from pathlib import Path as _P
++_sys.path.insert(0, str(_P(__file__).resolve().parents[2]))   # project root (file moved to experiments/legacy/)
+ import sys
+ from pathlib import Path
+ 
+@@ -6,7 +9,7 @@ import pandas as pd
+ 
+ from reid import evaluate as official
+ 
+-ROOT = Path(__file__).resolve().parent
++ROOT = Path(__file__).resolve().parents[2]
+ 
+ SPLITS = (ROOT / "data" / "splits")
+ pred = Path(sys.argv[1])                       # folder with all_candidates.csv
+diff --git a/queue.ps1 b/experiments/queues/queue.ps1
+similarity index 100%
+rename from queue.ps1
+rename to experiments/queues/queue.ps1
+diff --git a/queue_distill.ps1 b/experiments/queues/queue_distill.ps1
+similarity index 100%
+rename from queue_distill.ps1
+rename to experiments/queues/queue_distill.ps1
+diff --git a/queue_night.ps1 b/experiments/queues/queue_night.ps1
+similarity index 100%
+rename from queue_night.ps1
+rename to experiments/queues/queue_night.ps1
+diff --git a/queue_veri.ps1 b/experiments/queues/queue_veri.ps1
+similarity index 100%
+rename from queue_veri.ps1
+rename to experiments/queues/queue_veri.ps1
+-- 
+2.43.0
+
