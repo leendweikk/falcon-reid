@@ -67,6 +67,7 @@ docker run --rm --gpus all --network none \
 to `/out`. The build downloads PyTorch and our weights (network allowed at build time, answer #39); the weights
 come from the [`weights-v1` release](https://github.com/leendweikk/falcon-reid/releases/tag/weights-v1) and are
 **checked by sha256** (`weights/manifest.json`), and the build runs an offline self-test of both stages.
+**disclaimer** If the build machine cannot reach GitHub, download `vit_infer.pth` and `base_infer.pth` from the release into `weights/` before building; `fetch_weights.py` then uses the local files (still checking sha256).
 The same thing with Compose: put the dataset in `./data`, then `docker compose --profile batch run --rm predict`.
 
 ### 2. The web service — one command, offline
