@@ -49,8 +49,8 @@ Every idea was checked here before it was tried. Status as of 26 Sep 2026.
 | Backend in Python, Linux, open source | ✅ |
 | Vector DB for embeddings + metadata | ✅ pgvector with HNSW |
 | OpenAPI/Swagger for all endpoints; browser thin client | ✅ `/api/docs` |
-| Dockerfile + docker-compose, one-command start, offline | ✅ batch (tested) · service (compose; full Docker test planned before upload) |
+| Dockerfile + docker-compose, one-command start, offline | ✅ batch (tested) · service (compose; full Docker test tested successfully ✅ ) |
 | Pinned versions (`==`), weights with sha256 (#39) | ✅ |
 | README: architecture, methods, build steps, validation metrics, threshold reasoning, all libraries/datasets with versions (ТЗ §12) | ✅ |
-| Presentation PDF/PPTX (ТЗ §11), slides 7–11 in the strict template (Telegram) | 🔄 in progress |
-| Submission links: open repo, presentation, working prototype, docs (ТЗ §13) | 🔄 before the deadline |
+| Presentation PDF/PPTX (ТЗ §11), slides 7–11 in the strict template (Telegram) | ✅ done |
+| Submission links: open repo, presentation, working prototype, docs (ТЗ §13) |  ✅ done |
