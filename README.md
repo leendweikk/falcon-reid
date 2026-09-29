@@ -1,5 +1,8 @@
 # Falcon ReID — vehicle re-identification without licence plates
-
+disclaimer : This repository includes documentation and presentation materials in both English and Russian to ensure maximum clarity and accessibility for the evaluation committee.
+ • Primary Source of Truth: English ( README.md ,  presentation_en.pptx )
+ • Official Translation: Russian ( README_ru.md ,  presentation_ru.pptx )
+Both versions are maintained to reflect the exact same technical facts, metrics, and architectural decisions.
 **ЛЦТ 2026 · Task 7 «ФАЛЬКОН.Tech»** — a service that builds a visual "digital fingerprint" of a vehicle
 and finds the same physical car in photos from other cameras, **without using the licence plate**.
 It ranks the gallery for every query and **refuses** ("no confident match") when the car is not there.
